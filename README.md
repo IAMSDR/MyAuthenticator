@@ -30,7 +30,7 @@ See the live demo:
 
 💫 **Icons:** Includes 100+ colored icons and access to 3000+ icons from SimpleIcons, all in SVG format for scalability.
 
-🔐 **Secure:** Uses Nuxt Auth Utils for authentication and encrypts database fields for enhanced security.
+🔐 **Secure:** Uses nuxt-auth-utils for authentication and encrypts database fields for enhanced security.
 
 🗃️ **Backup / Restore:** Securely backup and restore authenticators with encryption. Supports import from and export to Google Authenticator.
 
@@ -126,12 +126,10 @@ npx nuxi dev --remote
 
 Feel free to contribute to this project with your ideas and improvements. Your feedback and suggestions are highly valued and will help enhance this project further.
 
-## Copyright
-
-Copyright (C) 2024 [IAMSDR](https://github.com/iamsdr) under [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.en.html).
+## License
 
 MyAuthenticator is Free Software: You can use, study share and improve it at your
 will. Specifically you can redistribute and/or modify it under the terms of the
 [GNU Affero General Public License](https://www.gnu.org/licenses/agpl-3.0.en.html) as
 published by the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version. Also keep in mind that all the forks of this repository MUST BE OPEN-SOURCE and MUST BE UNDER THE SAME LICENSE.
+(at your option) any later version.
