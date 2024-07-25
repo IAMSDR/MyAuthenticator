@@ -1,0 +1,38 @@
+{
+  "name": "MyAuthenticator",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "db:generate": "drizzle-kit generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@iconify/json": "^2.2.220",
+    "@nuxt/ui": "^2.17.0",
+    "@nuxthub/core": "^0.6.17",
+    "@steveyuowo/vue-hot-toast": "^1.2.5",
+    "@vueuse/core": "^10.11.0",
+    "drizzle-orm": "^0.31.2",
+    "grammy": "^1.24.1",
+    "long": "^5.2.3",
+    "nuxt": "^3.12.2",
+    "nuxt-auth-utils": "^0.1.0",
+    "otpauth": "^9.3.1",
+    "protobufjs": "^7.3.2",
+    "qrcode.vue": "^3.4.1",
+    "uncrypto": "^0.1.3",
+    "vue": "^3.4.29",
+    "vue-qrcode-reader": "^5.5.6",
+    "vue-router": "^4.3.3",
+    "vue-tg": "^0.6.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.22.7",
+    "wrangler": "^3.60.3"
+  }
+}
