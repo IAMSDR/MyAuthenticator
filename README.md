@@ -77,7 +77,9 @@ NUXT_TELEGRAM_USERID="874962691"
 
 - `NUXT_TELEGRAM_USERID`: This is your Telegram User ID used to identify you as a user of the bot. Obtain it from [@MissRose_bot](https://telegram.dog/MissRose_bot) using the `/info` command. Required for using this web app as a Telegram miniapp.
 
-## Deploy to Cloudflare Pages
+## Deploy 🚀
+
+[![Deploy to NuxtHub](https://hub.nuxt.com/button.svg)](https://hub.nuxt.com/new?repo=IAMSDR/MyAuthenticator)
 
 > [!NOTE]
 > This project is currently under testing and improvements. Please back up your data before proceeding.

@@ -2,12 +2,15 @@
 
 export default defineNuxtConfig({
   devtools: { enabled: false },
+
   colorMode: {
     preference: "dark",
   },
+
   modules: ["@nuxt/ui", "nuxt-auth-utils", "@nuxthub/core"],
-  ui: {
-    icons: ["heroicons", "material-symbols", "simple-icons"],
+
+  icon: {
+    serverBundle: "auto",
   },
   runtimeConfig: {
     AUTH_USERNAME: "",
@@ -16,9 +19,11 @@ export default defineNuxtConfig({
     TELEGRAM_BOT_TOKEN: "",
     TELEGRAM_USERID: "",
   },
+
   hub: {
     database: true,
   },
+
   app: {
     head: {
       title: "MyAuthenticator",
@@ -27,4 +32,6 @@ export default defineNuxtConfig({
       ],
     },
   },
+
+  compatibilityDate: "2024-08-31",
 });

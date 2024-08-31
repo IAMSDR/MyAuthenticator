@@ -23,7 +23,8 @@
             <AccountIcon
               :isImg="account.icontype !== 'simple'"
               :icon="account.icon"
-              class="h-full w-full p-1"
+              class="h-8 w-8"
+              imgclass="p-1"
             />
           </div>
         </div>
