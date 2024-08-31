@@ -35,15 +35,15 @@
               :isImg="!selectedSimpleIcons"
               :icon="state.icon"
               class="h-5 w-5"
-              imgclass="h-5 w-5"
+              imgclass="h-4 p-4"
             />
           </template>
           <template #option="{ option: icon }">
             <AccountIcon
               :isImg="!selectedSimpleIcons"
               :icon="icon"
-              class="h-5 w-5 p-0.5"
-              imgclass="h-5 w-5 p-0.5"
+              class="h-4 w-4"
+              imgclass="h-4 w-4"
             />
             <span class="truncate ml-2 capitalize">{{ icon }}</span>
           </template>

@@ -12,7 +12,6 @@
     :name="icon && `i-simple-icons-${icon}`"
     :class="class"
     class="text-gray-800 dark:text-gray-200"
-    dynamic
   />
 </template>
 
