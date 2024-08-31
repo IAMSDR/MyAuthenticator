@@ -10,9 +10,7 @@ export default defineNuxtConfig({
   modules: ["@nuxt/ui", "nuxt-auth-utils", "@nuxthub/core"],
 
   icon: {
-    serverBundle: {
-      collections: ["heroicons", "material-symbols", "simple-icons"],
-    },
+    serverBundle: "auto",
   },
   runtimeConfig: {
     AUTH_USERNAME: "",
