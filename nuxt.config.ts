@@ -19,9 +19,6 @@ export default defineNuxtConfig({
     AUTH_PASSWORD: "",
     DB_ENCRYPTION_PASSWORD: "",
   },
-  future: {
-    compatibilityVersion: 4,
-  },
   hub: {
     database: true,
     kv: true,
