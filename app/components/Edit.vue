@@ -44,7 +44,9 @@ async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
 
 async function onError(event: FormErrorEvent) {
   console.log(event.errors[0]);
-  toast.error(event.errors[0]?.message!);
+  if (event.errors[0]?.message) {
+    toast.error(event.errors[0].message);
+  }
 }
 
 watch(searchIconDebounced, async (query) => {
@@ -63,14 +65,14 @@ watch(searchIconDebounced, async (query) => {
       >
         <UFormField size="xl" label="Icon" name="icon" required>
           <UInputMenu
+            v-model:search-term="searchIcon"
+            v-model="state.icon"
             ignore-filter
             :items="icons || []"
             :icon="state.icon"
             :placeholder="state.issuer"
-            v-model:search-term="searchIcon"
             size="xl"
             value-key="icon"
-            v-model="state.icon"
             required
           >
             <template #empty>Type something to search</template>
@@ -78,27 +80,27 @@ watch(searchIconDebounced, async (query) => {
         </UFormField>
         <UFormField size="xl" label="Issuer" name="issuer" required>
           <UInput
-            size="xl"
             v-model="state.issuer"
+            size="xl"
             required
             icon="i-heroicons-building-office-2"
           />
         </UFormField>
         <UFormField size="xl" label="Label" name="label" required>
           <UInput
-            size="xl"
             v-model="state.label"
+            size="xl"
             required
             icon="i-heroicons-envelope"
           />
         </UFormField>
         <div class="flex w-full justify-end space-x-4 mt-4 px-3">
           <UButton
-            @click="emit('close')"
             label="Cancel"
             color="neutral"
             variant="ghost"
             size="lg"
+            @click="emit('close')"
           />
           <UButton type="submit" :disabled="loading" variant="soft" size="md"
             >Submit</UButton

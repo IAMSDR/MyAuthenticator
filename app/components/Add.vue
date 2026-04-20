@@ -32,14 +32,14 @@ const openQrscan = async () => {
         @click="openQrscan"
         >Scan QR Code</UButton
       >
-      <hr class="my-2 border-t border-(--ui-primary)/30" />
+      <hr class="my-2 border-t border-(--ui-primary)/30" >
       <UButton
         color="primary"
         class="gap-x-3 p-3 px-6"
         variant="ghost"
         icon="i-heroicons-key-solid"
-        @click="openForm"
         block
+        @click="openForm"
         >Enter Setup Key</UButton
       >
     </template>

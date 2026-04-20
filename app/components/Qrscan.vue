@@ -77,8 +77,8 @@ const onError = (error: Error) => {
   <UModal title="Scan QR Code" :close="false">
     <template #body>
       <QrcodeStream
-        class="h-full w-full overflow-hidden rounded-[calc(var(--ui-radius)*2)] border-2 border-neutral-700"
         v-if="!state.error"
+        class="h-full w-full overflow-hidden rounded-[calc(var(--ui-radius)*2)] border-2 border-neutral-700"
         @camera-on="onReady"
         @detect="onDetect"
         @error="onError"
@@ -98,7 +98,7 @@ const onError = (error: Error) => {
       <div class="flex-center relative">
         <UButton size="sm" variant="soft" icon="i-heroicons-photo-16-solid">
           <label for="fileinput" class="cursor-pointer">Upload Image</label>
-          <QrcodeCapture class="w-0" id="fileinput" @detect="onDetect" />
+          <QrcodeCapture id="fileinput" class="w-0" @detect="onDetect" />
         </UButton>
       </div>
     </template>

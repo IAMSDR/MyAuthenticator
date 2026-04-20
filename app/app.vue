@@ -8,7 +8,7 @@ const colorMode = useColorMode();
 
 const color = computed(() =>
   colorMode.value === "dark"
-    ? (colors as any)[appConfig.ui.colors.neutral][900]
+    ? (colors as Record<string, Record<number, string>>)[appConfig.ui.colors.neutral]?.[900] ?? "black"
     : "white"
 );
 const radius = computed(

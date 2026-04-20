@@ -217,12 +217,12 @@ const restoreFromUriListFile = async () => {
             @submit.prevent="downloadEncryptedBackupFile"
           >
             <UInput
+              v-model="password"
               color="primary"
               variant="outline"
               placeholder="Password"
               required
               minlength="8"
-              v-model="password"
             />
             <UButton
               color="primary"
@@ -297,12 +297,12 @@ const restoreFromUriListFile = async () => {
             />
             <div class="flex-center space-x-4">
               <UInput
+                v-model="password"
                 color="primary"
                 variant="outline"
                 placeholder="Password"
                 required
                 minlength="8"
-                v-model="password"
               />
               <UButton
                 color="primary"

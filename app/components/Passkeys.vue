@@ -92,12 +92,12 @@ const deletePasskey = async (id: string) => {
       <div class="py-4 flex-col">
         <form class="flex justify-end space-x-2" @submit.prevent="addPasskey">
           <UInput
+            v-model="passKeyName"
             color="neutral"
             variant="outline"
             placeholder="Passkey Name"
             :ui="{ root: 'w-auto' }"
             required
-            v-model="passKeyName"
           />
           <UButton
             type="submit"

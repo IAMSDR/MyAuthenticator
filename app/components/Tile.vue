@@ -137,8 +137,8 @@ onUnmounted(() => {
         <div class="h-full flex items-center mt-2 pb-1">
           <UTooltip text="Click to copy" class="cursor-pointer">
             <span
-              @click="copyToken"
               class="text-3xl text-neutral-800 dark:text-neutral-100 font-medium tracking-wide"
+              @click="copyToken"
               >{{ token }}</span
             >
           </UTooltip>
@@ -161,8 +161,8 @@ onUnmounted(() => {
       >
         <Transition name="slide">
           <div
-            ref="options"
             v-show="showOptions"
+            ref="options"
             class="w-60 h-full bg-white dark:bg-neutral-900 overflow-hidden rounded-[calc(var(--ui-radius)*2)] pl-5 pr-4"
           >
             <Transition name="slide2">
@@ -200,7 +200,7 @@ onUnmounted(() => {
                 </div>
               </div>
               <div
-                v-else="deleteConfirmation"
+                v-else
                 class="h-full w-full flex-center space-x-4 text-sm font-semibold"
               >
                 <span>Are you sure ?</span>

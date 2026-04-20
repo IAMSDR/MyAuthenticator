@@ -55,7 +55,9 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
 
 async function onError(event: FormErrorEvent) {
   console.log(event.errors[0]);
-  toast.error(event.errors[0]?.message!);
+  if (event.errors[0]?.message) {
+    toast.error(event.errors[0].message);
+  }
 }
 </script>
 

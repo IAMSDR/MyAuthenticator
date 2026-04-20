@@ -5,13 +5,13 @@
       class="relative h-5 w-5 left-5"
     />
     <input
+      ref="input"
       class="bg-transparent pl-8 p-1.5 outline-none border-b border-(--ui-primary) w-full max-w-sm"
       type="text"
-      @input="onInput"
       :value="modalValue"
-      ref="input"
       placeholder="Search"
-    />
+      @input="onInput"
+    >
     <UButton
       icon="i-heroicons-x-mark-16-solid"
       class="relative right-6"

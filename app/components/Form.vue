@@ -59,7 +59,9 @@ async function addAccount(event: FormSubmitEvent<Account>) {
 
 async function onError(event: FormErrorEvent) {
   console.log(event.errors[0]);
-  toast.error(event.errors[0]?.message!);
+  if (event.errors[0]?.message) {
+    toast.error(event.errors[0].message);
+  }
 }
 
 watch(searchIssuerDebounced, async (query) => {
@@ -78,34 +80,34 @@ watch(searchIssuerDebounced, async (query) => {
       >
         <UFormField size="xl" label="Issuer" name="issuer" required>
           <UInputMenu
+            v-model:search-term="searchIssuer"
+            v-model="selectedIssuer"
             ignore-filter
             :items="icons || []"
             :icon="state.icon"
             placeholder="Google"
-            v-model:search-term="searchIssuer"
             size="xl"
-            v-model="selectedIssuer"
-            @update:model-value="updateIssuerAndIcon"
             required
+            @update:model-value="updateIssuerAndIcon"
           >
             <template #empty>Type something to search</template>
           </UInputMenu>
         </UFormField>
         <UFormField size="xl" label="Label" name="label" required>
           <UInput
-            size="xl"
             v-model="state.label"
+            size="xl"
             required
             icon="i-heroicons-envelope"
           />
         </UFormField>
         <UFormField size="xl" label="Type" name="type" required>
-          <USelect size="xl" v-model="state.type" :items="otpTypes" />
+          <USelect v-model="state.type" size="xl" :items="otpTypes" />
         </UFormField>
         <UFormField size="xl" label="Key" name="secret" required>
           <UInput
-            size="xl"
             v-model="state.secret"
+            size="xl"
             required
             icon="i-heroicons-key"
           />
@@ -125,13 +127,13 @@ watch(searchIssuerDebounced, async (query) => {
           name="algorithm"
           required
         >
-          <USelect size="xl" v-model="state.algorithm" :items="algorithms" />
+          <USelect v-model="state.algorithm" size="xl" :items="algorithms" />
         </UFormField>
         <div v-show="showAdvanced" class="flex-center space-x-3 w-full">
           <UFormField label="Digits" size="xl" required>
             <UInput
-              name="digits"
               v-model="state.digits"
+              name="digits"
               type="number"
               icon="i-material-symbols-123"
               required
@@ -146,8 +148,8 @@ watch(searchIssuerDebounced, async (query) => {
             required
           >
             <UInput
-              name="period"
               v-model="state.period"
+              name="period"
               type="number"
               icon="i-material-symbols-timer-outline-rounded"
               required
@@ -157,8 +159,8 @@ watch(searchIssuerDebounced, async (query) => {
           </UFormField>
           <UFormField v-else label="Counter" size="xl" required>
             <UInput
-              name="counter"
               v-model="state.counter"
+              name="counter"
               type="number"
               icon="i-material-symbols-timer-outline-rounded"
               required
@@ -169,11 +171,11 @@ watch(searchIssuerDebounced, async (query) => {
         </div>
         <div class="flex w-full justify-end space-x-4 mt-4 px-3">
           <UButton
-            @click="emit('close')"
             label="Cancel"
             color="neutral"
             variant="ghost"
             size="lg"
+            @click="emit('close')"
           />
           <UButton type="submit" :disabled="loading" variant="soft" size="md"
             >Submit</UButton

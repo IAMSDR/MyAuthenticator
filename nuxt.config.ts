@@ -20,7 +20,7 @@ export default defineNuxtConfig({
     DB_ENCRYPTION_PASSWORD: "",
   },
   hub: {
-    database: true,
+    db: { dialect: "sqlite" },
     kv: true,
   },
   auth: {

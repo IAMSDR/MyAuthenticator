@@ -24,7 +24,7 @@ const colorsToOmit = [
   "white",
   ...neutralColors,
 ];
-const primaryColors = Object.keys(omit(colors, colorsToOmit as any));
+const primaryColors = Object.keys(omit(colors, colorsToOmit as Record<string, unknown>));
 const primary = computed({
   get() {
     return appConfig.ui.colors.primary;
