@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
 import { toast } from "@steveyuowo/vue-hot-toast";
+import { ensureOnline } from "~/utils/offline";
 
-const props = defineProps<{ account: AccountEdit; accountId: number }>();
+const props = defineProps<{ account: AccountEdit; accountId: string }>();
 
 const emit = defineEmits(["close"]);
 
@@ -17,8 +18,9 @@ const icons = ref<Icon[]>([]);
 const loading = ref(false);
 
 async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
+  if (!ensureOnline("save changes")) return;
   loading.value = true;
-  const toastid = toast.loading("loading...");
+  const toastid = toast.loading("Saving...");
   await $fetch("/api/accounts", {
     method: "PATCH",
     query: { id: props.accountId },
@@ -26,7 +28,7 @@ async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
   })
     .then(async (res) => {
       toast.update(toastid, {
-        message: res.message,
+        message: (res as any).message,
         type: "success",
       });
       await refreshNuxtData("accounts");
@@ -34,7 +36,7 @@ async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
     })
     .catch((err) => {
       toast.update(toastid, {
-        message: err?.data?.message ?? err,
+        message: err?.data?.message ?? String(err),
         type: "error",
       });
       console.error(err);
@@ -43,8 +45,7 @@ async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
 }
 
 async function onError(event: FormErrorEvent) {
-  console.log(event.errors[0]);
-  toast.error(event.errors[0]?.message!);
+  toast.error(event.errors[0]?.message ?? "Validation error");
 }
 
 watch(searchIconDebounced, async (query) => {
@@ -53,58 +54,73 @@ watch(searchIconDebounced, async (query) => {
 </script>
 
 <template>
-  <UModal title="Edit" :close="false" :dismissible="false">
+  <UModal title="Edit Account" description="Update details for this authenticator">
     <template #body>
       <UForm
         :schema="accountEditSchema"
         :state="state"
+        class="space-y-4"
         @submit="updateAccount"
         @error="onError"
       >
-        <UFormField size="xl" label="Icon" name="icon" required>
+        <UFormField label="Icon" name="icon" required>
           <UInputMenu
+            v-model="state.icon"
+            v-model:search-term="searchIcon"
             ignore-filter
             :items="icons || []"
             :icon="state.icon"
             :placeholder="state.issuer"
-            v-model:search-term="searchIcon"
-            size="xl"
+            size="md"
             value-key="icon"
-            v-model="state.icon"
             required
+            :ui="{ base: 'h-10' }"
           >
             <template #empty>Type something to search</template>
           </UInputMenu>
         </UFormField>
-        <UFormField size="xl" label="Issuer" name="issuer" required>
+
+        <UFormField label="Issuer" name="issuer" required>
           <UInput
-            size="xl"
             v-model="state.issuer"
+            size="md"
             required
             icon="i-heroicons-building-office-2"
+            :ui="{ base: 'h-10' }"
           />
         </UFormField>
-        <UFormField size="xl" label="Label" name="label" required>
+
+        <UFormField label="Label" name="label" required>
           <UInput
-            size="xl"
             v-model="state.label"
+            size="md"
             required
             icon="i-heroicons-envelope"
+            :ui="{ base: 'h-10' }"
           />
         </UFormField>
-        <div class="flex w-full justify-end space-x-4 mt-4 px-3">
+
+        <div class="flex justify-end gap-2 pt-2">
           <UButton
-            @click="emit('close')"
             label="Cancel"
             color="neutral"
             variant="ghost"
-            size="lg"
+            size="sm"
+            class="cursor-pointer"
+            @click="emit('close')"
           />
-          <UButton type="submit" :disabled="loading" variant="soft" size="md"
-            >Submit</UButton
+          <UButton
+            type="submit"
+            :disabled="loading"
+            :loading="loading"
+            size="sm"
+            class="cursor-pointer"
+            >Save changes</UButton
           >
         </div>
       </UForm>
     </template>
   </UModal>
 </template>
+
+

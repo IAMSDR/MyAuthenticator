@@ -63,7 +63,7 @@ const modes = [
 ];
 const mode = computed({
   get() {
-    return colorMode.value;
+    return colorMode.preference;
   },
   set(option) {
     colorMode.preference = option;
@@ -78,18 +78,17 @@ function setBlackAsPrimary(value: boolean) {
 
 <template>
   <UModal
-    title="Theme"
-    :ui="{ close: 'top-2 start-6 end-auto' }"
-    close-icon="i-lucide-arrow-left"
+    title="Theme & Style"
+    description="Customize colors, radius and appearance"
   >
     <template #body>
-      <div class="p-1 flex-col flex space-y-3 py-2">
-        <fieldset>
-          <legend class="text-[11px] leading-none font-semibold mb-2">
-            Primary
-          </legend>
+      <div class="space-y-4">
+        <div>
+          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 block mb-2">
+            Primary Color
+          </span>
 
-          <div class="grid grid-cols-3 gap-1 -mx-2">
+          <div class="grid grid-cols-3 gap-1.5">
             <ThemePickerButton
               chip="primary"
               label="Black"
@@ -98,12 +97,12 @@ function setBlackAsPrimary(value: boolean) {
             >
               <template #leading>
                 <span
-                  class="inline-block w-2 h-2 rounded-full bg-black dark:bg-white"
+                  class="inline-block size-2 rounded-full bg-black dark:bg-white"
                 />
               </template>
             </ThemePickerButton>
             <ThemePickerButton
-              v-for="color in primaryColors"
+              v-for="color in primaryColors.slice(0, 8)"
               :key="color"
               :label="color"
               :chip="color"
@@ -111,13 +110,14 @@ function setBlackAsPrimary(value: boolean) {
               @click="primary = color"
             />
           </div>
-        </fieldset>
-        <fieldset>
-          <legend class="text-[11px] leading-none font-semibold mb-2">
-            Neutral
-          </legend>
+        </div>
 
-          <div class="grid grid-cols-3 gap-1 -mx-2">
+        <div>
+          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 block mb-2">
+            Neutral Color
+          </span>
+
+          <div class="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
             <ThemePickerButton
               v-for="color in neutralColors"
               :key="color"
@@ -127,29 +127,31 @@ function setBlackAsPrimary(value: boolean) {
               @click="neutral = color"
             />
           </div>
-        </fieldset>
-        <fieldset>
-          <legend class="text-[11px] leading-none font-semibold mb-2">
-            Radius
-          </legend>
+        </div>
 
-          <div class="grid grid-cols-5 gap-1 -mx-2">
+        <div>
+          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 block mb-2">
+            Border Radius
+          </span>
+
+          <div class="grid grid-cols-5 gap-1.5">
             <ThemePickerButton
               v-for="r in radiuses"
               :key="r"
-              :label="String(r)"
+              :label="r === 0 ? 'None' : String(r)"
               class="justify-center px-0"
               :selected="radius === r"
               @click="radius = r"
             />
           </div>
-        </fieldset>
-        <fieldset>
-          <legend class="text-[11px] leading-none font-semibold mb-2">
-            Theme
-          </legend>
+        </div>
 
-          <div class="grid grid-cols-3 gap-1 -mx-2">
+        <div>
+          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 block mb-2">
+            Theme Mode
+          </span>
+
+          <div class="grid grid-cols-3 gap-1.5">
             <ThemePickerButton
               v-for="m in modes"
               :key="m.label"
@@ -158,8 +160,10 @@ function setBlackAsPrimary(value: boolean) {
               @click="mode = m.label"
             />
           </div>
-        </fieldset>
+        </div>
       </div>
     </template>
   </UModal>
 </template>
+
+

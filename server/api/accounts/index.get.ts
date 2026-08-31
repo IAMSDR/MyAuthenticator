@@ -1,19 +1,15 @@
 export default eventHandler(async (event) => {
-  const session = await requireUserSession(event);
-  const runtimeConfig = useRuntimeConfig(event);
-  const accounts = await useDrizzle().select().from(tables.accounts).all();
-  if (runtimeConfig.DB_ENCRYPTION_PASSWORD) {
+  await requireUserSession(event);
+  const redis = getRedis();
+  const accountsMap = await redis.hgetall(redisKeys.accounts);
+  if (!accountsMap || Object.keys(accountsMap).length === 0) return [];
+  const accounts: CipherAccount[] = [];
+  for (const json of Object.values(accountsMap)) {
     try {
-      const key = await importKey(runtimeConfig.DB_ENCRYPTION_PASSWORD);
-      for (const account of accounts) {
-        account.secret = await decryptWithKey(account.secret, key);
-      }
+      const parsed = JSON.parse(json) as CipherAccount;
+      if (parsed?.id && parsed?.secret) accounts.push(parsed);
     } catch {
-      throw createError({
-        statusCode: 400,
-        statusText: "Invalid Key",
-        message: "Invalid Key - Failed to decrypt accounts",
-      });
+      // skip invalid JSON (corrupted entry)
     }
   }
   return accounts;

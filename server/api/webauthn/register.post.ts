@@ -1,31 +1,34 @@
 export default defineWebAuthnRegisterEventHandler({
   async storeChallenge(event, challenge, attemptId) {
-    await hubKV().set(`auth:challenge:${attemptId}`, challenge, { ttl: 60 });
+    const redis = getRedis();
+    await redis.set(challengeKey(attemptId), challenge, { ex: 60 });
   },
   async getChallenge(event, attemptId) {
-    const challenge = await hubKV().get<string>(`auth:challenge:${attemptId}`);
+    const redis = getRedis();
+    const challenge = await redis.get(challengeKey(attemptId));
     if (!challenge) {
       throw createError({
         statusCode: 400,
         message: "Challenge not found or expired",
       });
     }
-    await hubKV().del(`auth:challenge:${attemptId}`);
-    return challenge;
+    await redis.del(challengeKey(attemptId));
+    return challenge as string;
   },
   validateUser: (user) => passkeyUser.parseAsync(user),
   async onSuccess(event, { user, credential }) {
-    const db = useDrizzle();
-    const isDeviceExists = await db.query.credentials.findFirst({
-      where: eq(tables.credentials.displayName, user.displayName),
-    });
-    if (isDeviceExists) {
+    const redis = getRedis();
+    const raw = await redis.get(redisKeys.passkeys);
+    const passkeys: Array<{ id: string; displayName: string; user: string; publicKey: string; counter: number; backedUp: boolean; transports: unknown; createdAt: string }> = raw ? (JSON.parse(raw) as typeof passkeys) : [];
+
+    const exists = passkeys.find((p) => p.displayName === user.displayName || p.id === credential.id);
+    if (exists) {
       throw createError({
         statusCode: 409,
         message: "Device already registered",
       });
     }
-    await db.insert(tables.credentials).values({
+    passkeys.push({
       displayName: user.displayName,
       user: user.userName,
       id: credential.id,
@@ -33,6 +36,8 @@ export default defineWebAuthnRegisterEventHandler({
       counter: credential.counter,
       backedUp: credential.backedUp,
       transports: credential.transports,
+      createdAt: new Date().toISOString(),
     });
+    await redis.set(redisKeys.passkeys, JSON.stringify(passkeys));
   },
 });

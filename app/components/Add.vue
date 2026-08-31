@@ -9,39 +9,51 @@ const emit = defineEmits(["close"]);
 const formModal = overlay.create(Form);
 const qrModal = overlay.create(Qrscan);
 
-const openForm = async () => {
+const openForm = () => {
   emit("close");
-  setTimeout(() => formModal.open(), 300);
+  setTimeout(() => formModal.open(), 200);
 };
 
-const openQrscan = async () => {
+const openQrscan = () => {
   emit("close");
-  setTimeout(() => qrModal.open(), 300);
+  setTimeout(() => qrModal.open(), 200);
 };
 </script>
 
 <template>
-  <UModal :ui="{ content: 'p-2' }">
-    <template #content>
-      <UButton
-        icon="i-heroicons-qr-code-solid"
-        color="primary"
-        variant="ghost"
-        block
-        class="gap-x-3 p-3 px-6"
-        @click="openQrscan"
-        >Scan QR Code</UButton
-      >
-      <hr class="my-2 border-t border-(--ui-primary)/30" />
-      <UButton
-        color="primary"
-        class="gap-x-3 p-3 px-6"
-        variant="ghost"
-        icon="i-heroicons-key-solid"
-        @click="openForm"
-        block
-        >Enter Setup Key</UButton
-      >
+  <UModal title="Add authenticator" description="Choose how to add your account">
+    <template #body>
+      <div class="space-y-2">
+        <button
+          class="w-full flex items-center gap-3.5 p-3 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-left transition-colors cursor-pointer group"
+          @click="openQrscan"
+        >
+          <div class="size-9 rounded-md bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+            <UIcon name="i-heroicons-qr-code-solid" class="size-5" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <span class="block text-sm font-semibold text-neutral-900 dark:text-neutral-100">Scan QR Code</span>
+            <span class="block text-xs text-neutral-500 dark:text-neutral-400">Use your camera or upload an image</span>
+          </div>
+          <UIcon name="i-lucide-chevron-right" class="size-4 text-neutral-400" />
+        </button>
+
+        <button
+          class="w-full flex items-center gap-3.5 p-3 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-left transition-colors cursor-pointer group"
+          @click="openForm"
+        >
+          <div class="size-9 rounded-md bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+            <UIcon name="i-heroicons-key-solid" class="size-5" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <span class="block text-sm font-semibold text-neutral-900 dark:text-neutral-100">Enter Setup Key</span>
+            <span class="block text-xs text-neutral-500 dark:text-neutral-400">Manually type in secret key</span>
+          </div>
+          <UIcon name="i-lucide-chevron-right" class="size-4 text-neutral-400" />
+        </button>
+      </div>
     </template>
   </UModal>
 </template>
+
+

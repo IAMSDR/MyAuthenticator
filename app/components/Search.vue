@@ -1,31 +1,45 @@
 <template>
-  <div class="flex flex-center h-10 py-4 my-3 px-2">
-    <UIcon
-      name="i-heroicons-magnifying-glass-16-solid"
-      class="relative h-5 w-5 left-5"
-    />
-    <input
-      class="bg-transparent pl-8 p-1.5 outline-none border-b border-(--ui-primary) w-full max-w-sm"
-      type="text"
-      @input="onInput"
-      :value="modalValue"
-      ref="input"
-      placeholder="Search"
-    />
-    <UButton
-      icon="i-heroicons-x-mark-16-solid"
-      class="relative right-6"
-      size="xs"
-      variant="ghost"
-      color="neutral"
-      @click="resetOrClose"
-    />
+  <div class="flex flex-center h-12 py-2 my-3 px-3 max-w-sm mx-auto">
+    <div class="relative w-full flex items-center">
+      <UIcon
+        name="i-heroicons-magnifying-glass-16-solid"
+        class="absolute left-3 size-4 text-neutral-400 dark:text-neutral-500 pointer-events-none"
+      />
+      <input
+        class="w-full pl-9 pr-8 py-2 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all"
+        type="text"
+        :value="modalValue"
+        ref="input"
+        placeholder="Search authenticators..."
+        @input="onInput"
+      />
+      <UButton
+        v-if="modalValue"
+        icon="i-heroicons-x-mark-16-solid"
+        class="absolute right-2"
+        size="xs"
+        variant="ghost"
+        color="neutral"
+        aria-label="Clear search"
+        @click="resetOrClose"
+      />
+      <UButton
+        v-else
+        icon="i-lucide-x"
+        class="absolute right-2"
+        size="xs"
+        variant="ghost"
+        color="neutral"
+        aria-label="Close search"
+        @click="resetOrClose"
+      />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-const props = defineProps(["modalValue"]);
-const emit = defineEmits(["update:modalValue"]);
+const props = defineProps<{ modalValue: string }>();
+const emit = defineEmits<{ (e: "update:modalValue", value: string): void }>();
 
 const input = ref<HTMLInputElement | null>(null);
 
@@ -44,3 +58,4 @@ onMounted(() => {
   input.value?.focus();
 });
 </script>
+

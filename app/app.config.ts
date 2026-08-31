@@ -1,101 +1,61 @@
 export default defineAppConfig({
-  // https://ui3.nuxt.dev/getting-started/theme#design-system
   ui: {
     colors: {
       primary: "green",
-      neutral: "slate",
+      neutral: "neutral",
+    },
+    icons: {
+      close: "i-lucide-x",
+      arrowLeft: "i-lucide-arrow-left",
     },
     separator: {
       slots: {
-        label: "text-xs font-mono",
+        label: "text-xs font-mono text-neutral-400 dark:text-neutral-500",
       },
     },
     card: {
       slots: {
-        root: "w-full max-w-xs overflow-hidden",
-        body: "!py-3 px-3 md:px-5 xl:px-8",
+        root: "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm divide-y divide-neutral-200 dark:divide-neutral-800",
+        header: "p-4 sm:p-5",
+        body: "p-5 sm:p-6",
+        footer: "p-4 sm:p-5",
       },
     },
     button: {
       slots: {
-        base: "cursor-pointer",
-      },
-    },
-    select: {
-      slots: {
-        base: "w-full",
-      },
-    },
-    inputMenu: {
-      slots: {
-        root: "w-full",
-      },
-      variants: {
-        size: {
-          xl: {
-            leadingIcon: "size-4",
-            itemLeadingIcon: "size-4",
-            base: "py-[9px]",
-          },
-        },
+        base: "cursor-pointer font-medium transition-colors duration-150",
       },
     },
     input: {
       slots: {
         root: "w-full",
       },
-      variants: {
-        size: {
-          xl: {
-            base: "py-[9px]",
-          },
-          lg: {
-            base: "py-[9px]",
-          },
-        },
-      },
     },
     formField: {
       slots: {
-        root: "mb-3 w-full",
-        error: "!hidden",
+        label: "text-sm font-medium text-neutral-900 dark:text-neutral-100",
+        description: "text-xs text-neutral-500 dark:text-neutral-400",
       },
-      variants: {
-        size: {
-          xl: {
-            root: "text-sm",
-          },
-        },
-      },
-    },
-    skeleton: {
-      base: "bg-white dark:bg-neutral-900",
     },
     modal: {
       slots: {
-        overlay: "bg-neutral-200/75 dark:bg-neutral-950/75 backdrop-blur-sm",
-        content: "divide-y-0 px-2",
-        title: "uppercase",
-        header: "pt-3 pb-0 justify-center min-h-auto",
+        overlay: "bg-neutral-950/70 backdrop-blur-sm transition-opacity",
+        content: "bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg max-w-md w-[calc(100%-2rem)] shadow-xl",
+        header: "p-5 pb-3 border-b border-neutral-200 dark:border-neutral-800",
+        title: "text-base font-semibold text-neutral-900 dark:text-neutral-100",
+        description: "text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed",
+        body: "p-5 space-y-4",
+        footer: "p-4 pt-3 flex justify-end gap-2 border-t border-neutral-200 dark:border-neutral-800",
       },
-      variants: {
-        transition: {
-          true: {
-            content:
-              "data-[state=open]:animate-[slide-in-from-bottom_250ms_ease-in-out] data-[state=closed]:animate-[slide-out-to-bottom_250ms_ease-in-out] data-[state=open]:sm:animate-[scale-in_200ms_ease-out] data-[state=closed]:sm:animate-[scale-out_200ms_ease-in]",
-          },
-        },
-        fullscreen: {
-          false: {
-            content:
-              "max-w-sm w-full sm:max-w-md h-max bottom-0 inset-x-0 top-auto mx-auto translate-x-0 translate-y-0 rounded-t-[calc(var(--ui-radius)*4)] sm:rounded-[calc(var(--ui-radius)*2)] shadow-lg ring sm:top-[50%] sm:left-[50%] sm:bottom-auto sm:right-auto sm:translate-x-[-50%] sm:translate-y-[-50%]",
-          },
-        },
-      },
+    },
+    container: {
+      base: "mx-auto w-full max-w-2xl px-4 sm:px-6",
     },
   },
   theme: {
-    radius: 0.25,
+    radius: 0.375,
     blackAsPrimary: false,
   },
 });
+
+

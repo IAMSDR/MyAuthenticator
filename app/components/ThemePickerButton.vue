@@ -1,10 +1,10 @@
 <script setup lang="ts">
 defineProps<{
-  label: string
-  icon?: string
-  chip?: string
-  selected?: boolean
-}>()
+  label: string;
+  icon?: string;
+  chip?: string;
+  selected?: boolean;
+}>();
 </script>
 
 <template>
@@ -14,7 +14,7 @@ defineProps<{
     variant="outline"
     :icon="icon"
     :label="label"
-    class="capitalize ring-(--ui-border) rounded-[calc(var(--ui-radius))] text-[11px]"
+    class="capitalize ring-(--ui-border) rounded-[calc(var(--ui-radius))] text-[11px] cursor-pointer"
     :class="[selected ? 'bg-(--ui-bg-elevated)' : 'hover:bg-(--ui-bg-elevated)/50']"
   >
     <template v-if="chip" #leading>
@@ -24,10 +24,11 @@ defineProps<{
           :class="`bg-(--color-light) dark:bg-(--color-dark)`"
           :style="{
             '--color-light': `var(--color-${chip}-500)`,
-            '--color-dark': `var(--color-${chip}-400)`
+            '--color-dark': `var(--color-${chip}-400)`,
           }"
         />
       </slot>
     </template>
   </UButton>
 </template>
+

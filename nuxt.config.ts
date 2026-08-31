@@ -5,7 +5,6 @@ export default defineNuxtConfig({
     "@nuxt/ui",
     "@nuxt/eslint",
     "@vueuse/nuxt",
-    "@nuxthub/core",
     "nuxt-auth-utils",
     "@vite-pwa/nuxt",
   ],
@@ -15,16 +14,24 @@ export default defineNuxtConfig({
     localApiEndpoint: "/_nuxt_icon/:collection",
   },
   runtimeConfig: {
-    AUTH_USERNAME: "",
-    AUTH_PASSWORD: "",
-    DB_ENCRYPTION_PASSWORD: "",
+    session: {
+      password: "",
+    },
+    upstashRedisRestUrl: "",
+    upstashRedisRestToken: "",
+    redisUrl: "",
+  },
+  devServer: {
+    host: "0.0.0.0",
+  },
+  vite: {
+    server: {
+      host: "0.0.0.0",
+      allowedHosts: true,
+    },
   },
   future: {
     compatibilityVersion: 4,
-  },
-  hub: {
-    database: true,
-    kv: true,
   },
   auth: {
     webAuthn: true,
@@ -52,6 +59,29 @@ export default defineNuxtConfig({
     workbox: {
       globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
       maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      // Secondary cache layer for the vault sync endpoints. The primary offline path
+      // is IndexedDB (app/utils/cache.ts); this gives a network-cache fallback so the
+      // meta/accounts responses are servable from the SW cache when offline.
+      runtimeCaching: [
+        {
+          urlPattern: ({ url }) => url.pathname === "/api/accounts/meta",
+          handler: "NetworkFirst",
+          options: {
+            cacheName: "accounts-meta",
+            networkTimeoutSeconds: 4,
+            cacheableResponse: { statuses: [0, 200] },
+          },
+        },
+        {
+          urlPattern: ({ url }) => url.pathname === "/api/accounts",
+          handler: "NetworkFirst",
+          options: {
+            cacheName: "accounts",
+            networkTimeoutSeconds: 4,
+            cacheableResponse: { statuses: [0, 200] },
+          },
+        },
+      ],
     },
     injectManifest: {
       globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
@@ -67,5 +97,5 @@ export default defineNuxtConfig({
       type: "module",
     },
   },
-  compatibilityDate: "2025-03-15",
+  compatibilityDate: "2025-07-15",
 });

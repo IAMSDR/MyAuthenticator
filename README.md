@@ -61,28 +61,31 @@ You can deploy this project on your Cloudflare account for **free** with zero co
 ```sh
 # required
 NUXT_SESSION_PASSWORD="your-32-char-super-long-secret-for-session-encryption"
-NUXT_AUTH_USERNAME="admin"
-NUXT_AUTH_PASSWORD="Admin@123$"
 
-# optional
-NUXT_DB_ENCRYPTION_PASSWORD="your-32-char-super-long-secret-for-db-encryption"
+# Redis – choose one
+UPSTASH_REDIS_REST_URL="https://your-upstash-url.upstash.io"
+UPSTASH_REDIS_REST_TOKEN="your-upstash-token"
+# or self-host
+REDIS_URL="redis://localhost:6379"
+# Vercel alias also accepted
+KV_REST_API_URL="https://your-upstash-url.upstash.io"
+KV_REST_API_TOKEN="your-upstash-token"
 ```
 
 ### Required Variables
 
-- `NUXT_SESSION_PASSWORD`: This password is used by `nuxt-auth-utils` to secure your session. It must be at least 32 characters long.
+- `NUXT_SESSION_PASSWORD`: Used by `nuxt-auth-utils` to sign session cookie. Must be at least 32 characters long. Keep it in env only (not stored in Redis).
 
-- `NUXT_AUTH_USERNAME`: The username for authentication. It must be at least 5 characters long.
+- `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` **or** `REDIS_URL`: Redis connection. Upstash REST works on Cloudflare Workers/edge/Vercel (HTTP), `ioredis` via `REDIS_URL` works for Docker/self-host TCP. Set one pair. Free Upstash tier: 500K commands / 256 MB.
 
-- `NUXT_AUTH_PASSWORD`: The password for authentication. It must be at least 8 characters long and include:
-  - One uppercase letter
-  - One digit
-  - One lowercase letter
-  - Two special characters
+### Security Notes (envelope encryption)
 
-### Optional Variables
-
-- `NUXT_DB_ENCRYPTION_PASSWORD`: This password is used to encrypt and decrypt the database field of `secretkey`. By default, no encryption is used for data stored in the database. You can enable encryption by setting this variable. `It must be exactly 32 characters long`.
+- Vault is **client-side zero-knowledge-ish**: a random 256-bit `DEK` is generated on `/setup` via `crypto.getRandomValues(32)`. `DEK` encrypts all `secret` fields (`AES-GCM iv12+ct` via `shared/utils/aes.ts:80`). Password and passkey PRF are `KEK`s that only wrap `DEK` (`auth:dek:password`, `auth:dek:prf:{id}` in Redis, `AES-GCM` ciphertexts).
+- Server never sees `DEK` or `prfSecret`. `auth:passwordHash` (`bcryptjs` cost 12) is for verification only.
+- `DEK` lives only in memory (`useState('dek')`), cleared on logout/`beforeunload`. `IndexedDB` holds only wrapped DEK + ciphertext cache, never raw `DEK`.
+- If password + all passkey PRF wrappers are lost, `DEK` is unrecoverable → data loss (no wipe/reset endpoint). Change password only when unlocked (re-wraps `DEK`). No recovery.
+- Passkey without `auth:dek:prf:*` wrapper is auth-only and will show “Passkey has no decrypt wrapper, use password login” (blocked per policy).
+- Backup/restore uses independent backup password (`BackupAndRestore.vue` `encryptWithPassword`), not `DEK`; restore re-encrypts plaintext secrets with live `DEK` before `HSET`.
 
 ## Contributing and Suggestions
 

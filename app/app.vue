@@ -8,7 +8,7 @@ const colorMode = useColorMode();
 
 const color = computed(() =>
   colorMode.value === "dark"
-    ? (colors as any)[appConfig.ui.colors.neutral][900]
+    ? (colors as any)[appConfig.ui.colors.neutral]?.[950] ?? "#0a0a0a"
     : "white"
 );
 const radius = computed(
@@ -42,10 +42,10 @@ useHead({
 
 <template>
   <NuxtPwaManifest />
-  <UApp>
-    <UContainer>
-      <NuxtPage />
-      <Toaster />
-    </UContainer>
+  <UApp :toaster="{ expand: false, position: 'top-right' }">
+    <NuxtPage />
+    <Toaster />
   </UApp>
 </template>
+
+

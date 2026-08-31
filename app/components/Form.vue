@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
 import { toast } from "@steveyuowo/vue-hot-toast";
+import { ensureOnline } from "~/utils/offline";
 
 const emit = defineEmits(["close"]);
 
@@ -33,15 +34,30 @@ const updateIssuerAndIcon = () => {
 };
 
 async function addAccount(event: FormSubmitEvent<Account>) {
+  if (!ensureOnline("save this authenticator")) return;
   loading.value = true;
-  const toastid = toast.loading("loading...");
+  const toastid = toast.loading("Saving...");
+  const { dek } = useEncryption();
+  if (!dek.value) {
+    toast.update(toastid, { message: "Vault locked: please login", type: "error" });
+    loading.value = false;
+    return;
+  }
+  const cipherSecret = await encryptWithKey(event.data.secret, dek.value);
+  const cipherAccount: CipherAccount = {
+    ...event.data,
+    id: crypto.randomUUID(),
+    secret: cipherSecret,
+    createdAt: new Date().toISOString(),
+  } as CipherAccount;
+
   await $fetch("/api/accounts", {
     method: "POST",
-    body: [event.data],
+    body: [cipherAccount],
   })
     .then(async (res) => {
       toast.update(toastid, {
-        message: res.message,
+        message: (res as any).message,
         type: "success",
       });
       await refreshNuxtData("accounts");
@@ -49,7 +65,7 @@ async function addAccount(event: FormSubmitEvent<Account>) {
     })
     .catch((err) => {
       toast.update(toastid, {
-        message: err?.data?.message ?? err,
+        message: err?.data?.message ?? String(err),
         type: "error",
       });
       console.error(err);
@@ -58,8 +74,7 @@ async function addAccount(event: FormSubmitEvent<Account>) {
 }
 
 async function onError(event: FormErrorEvent) {
-  console.log(event.errors[0]);
-  toast.error(event.errors[0]?.message!);
+  toast.error(event.errors[0]?.message ?? "Validation error");
 }
 
 watch(searchIssuerDebounced, async (query) => {
@@ -68,118 +83,139 @@ watch(searchIssuerDebounced, async (query) => {
 </script>
 
 <template>
-  <UModal title="Setup Using Key" :close="false" :dismissible="false">
+  <UModal title="Setup using key" description="Enter secret key manually">
     <template #body>
       <UForm
         :schema="accountSchema"
         :state="state"
+        class="space-y-4"
         @submit="addAccount"
         @error="onError"
       >
-        <UFormField size="xl" label="Issuer" name="issuer" required>
+        <UFormField label="Issuer" name="issuer" required>
           <UInputMenu
+            v-model="selectedIssuer"
+            v-model:search-term="searchIssuer"
             ignore-filter
             :items="icons || []"
             :icon="state.icon"
-            placeholder="Google"
-            v-model:search-term="searchIssuer"
-            size="xl"
-            v-model="selectedIssuer"
-            @update:model-value="updateIssuerAndIcon"
+            placeholder="Google, GitHub, etc."
+            size="md"
             required
+            :ui="{ base: 'h-10' }"
+            @update:model-value="updateIssuerAndIcon"
           >
             <template #empty>Type something to search</template>
           </UInputMenu>
         </UFormField>
-        <UFormField size="xl" label="Label" name="label" required>
+
+        <UFormField label="Label / Account name" name="label" required>
           <UInput
-            size="xl"
             v-model="state.label"
+            placeholder="name@example.com"
+            size="md"
             required
             icon="i-heroicons-envelope"
+            :ui="{ base: 'h-10' }"
           />
         </UFormField>
-        <UFormField size="xl" label="Type" name="type" required>
-          <USelect size="xl" v-model="state.type" :items="otpTypes" />
+
+        <UFormField label="Type" name="type" required>
+          <USelect v-model="state.type" :items="otpTypes" size="md" class="w-full" :ui="{ base: 'h-10' }" />
         </UFormField>
-        <UFormField size="xl" label="Key" name="secret" required>
+
+        <UFormField label="Secret Key" name="secret" required>
           <UInput
-            size="xl"
             v-model="state.secret"
+            placeholder="JBSWY3DPEHPK3PXP"
+            size="md"
             required
             icon="i-heroicons-key"
+            class="font-mono"
+            :ui="{ base: 'h-10' }"
           />
         </UFormField>
-        <div v-show="!showAdvanced" class="flex-center w-full">
+
+        <div v-show="!showAdvanced" class="flex-center w-full pt-1">
           <UButton
-            class="uppercase mx-auto text-xs font-bold font-mono text-(--ui-primary)/70"
+            class="text-xs font-semibold cursor-pointer"
             variant="ghost"
+            color="neutral"
+            size="xs"
             @click="showAdvanced = true"
-            >show advanced</UButton
+            >Show advanced options</UButton
           >
         </div>
-        <UFormField
-          v-show="showAdvanced"
-          size="xl"
-          label="Algorithm"
-          name="algorithm"
-          required
-        >
-          <USelect size="xl" v-model="state.algorithm" :items="algorithms" />
-        </UFormField>
-        <div v-show="showAdvanced" class="flex-center space-x-3 w-full">
-          <UFormField label="Digits" size="xl" required>
-            <UInput
-              name="digits"
-              v-model="state.digits"
-              type="number"
-              icon="i-material-symbols-123"
-              required
-              min="6"
-              max="8"
-            />
+
+        <div v-show="showAdvanced" class="p-3 rounded-lg bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-3">
+          <UFormField label="Algorithm" name="algorithm" required>
+            <USelect v-model="state.algorithm" :items="algorithms" size="sm" class="w-full" />
           </UFormField>
-          <UFormField
-            v-if="state.type === 'TOTP'"
-            label="Period"
-            size="xl"
-            required
-          >
-            <UInput
-              name="period"
-              v-model="state.period"
-              type="number"
-              icon="i-material-symbols-timer-outline-rounded"
+
+          <div class="grid grid-cols-2 gap-3">
+            <UFormField label="Digits" required>
+              <UInput
+                v-model.number="state.digits"
+                type="number"
+                name="digits"
+                size="sm"
+                required
+                min="6"
+                max="8"
+              />
+            </UFormField>
+
+            <UFormField
+              v-if="state.type === 'TOTP'"
+              label="Period (sec)"
               required
-              min="5"
-              max="60"
-            />
-          </UFormField>
-          <UFormField v-else label="Counter" size="xl" required>
-            <UInput
-              name="counter"
-              v-model="state.counter"
-              type="number"
-              icon="i-material-symbols-timer-outline-rounded"
-              required
-              min="0"
-              max="3000"
-            />
-          </UFormField>
+            >
+              <UInput
+                v-model.number="state.period"
+                type="number"
+                name="period"
+                size="sm"
+                required
+                min="5"
+                max="60"
+              />
+            </UFormField>
+
+            <UFormField v-else label="Counter" required>
+              <UInput
+                v-model.number="state.counter"
+                type="number"
+                name="counter"
+                size="sm"
+                required
+                min="0"
+                max="3000"
+              />
+            </UFormField>
+          </div>
         </div>
-        <div class="flex w-full justify-end space-x-4 mt-4 px-3">
+
+        <div class="flex justify-end gap-2 pt-2">
           <UButton
-            @click="emit('close')"
             label="Cancel"
             color="neutral"
             variant="ghost"
-            size="lg"
+            size="sm"
+            class="cursor-pointer"
+            @click="emit('close')"
           />
-          <UButton type="submit" :disabled="loading" variant="soft" size="md"
-            >Submit</UButton
+          <UButton
+            type="submit"
+            :disabled="loading"
+            :loading="loading"
+            size="sm"
+            class="cursor-pointer"
+            >Save account</UButton
           >
         </div>
       </UForm>
     </template>
   </UModal>
 </template>
+
+
