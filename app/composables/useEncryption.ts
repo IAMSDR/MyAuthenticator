@@ -14,12 +14,18 @@ export const useEncryption = () => {
 
   const decryptAccounts = async (cipherAccounts: CipherAccount[]): Promise<Account[]> => {
     if (!dek.value) throw new Error("DEK not available");
-    const results: Account[] = [];
-    for (const acc of cipherAccounts) {
-      const plainSecret = await decryptWithKey(acc.secret, dek.value);
-      results.push({ ...acc, secret: plainSecret } as Account);
-    }
-    return results;
+    const key = dek.value;
+    return await Promise.all(
+      cipherAccounts.map(async (acc) => {
+        try {
+          const plainSecret = await decryptWithKey(acc.secret, key);
+          return { ...acc, secret: plainSecret } as Account;
+        } catch (err) {
+          console.error(`Failed to decrypt account ${acc.id}:`, err);
+          throw err;
+        }
+      })
+    );
   };
 
   const encryptSecret = async (plainSecret: string): Promise<string> => {

@@ -1,24 +1,34 @@
 <script setup lang="ts">
+import AdaptiveModal from "./AdaptiveModal.vue";
 import ThemePicker from "./ThemePicker.vue";
 import Passkeys from "./Passkeys.vue";
 import BackupAndRestore from "./BackupAndRestore.vue";
 import ChangePassword from "./ChangePassword.vue";
+import { clearAllLocalVaultData } from "~/utils/cache";
 
+const emit = defineEmits(["close"]);
 const { clear } = useUserSession();
 const { clearDEK } = useEncryption();
 
 const overlay = useOverlay();
-
 const themePickerModal = overlay.create(ThemePicker);
 const passkeysModal = overlay.create(Passkeys);
 const backupAndRestoreModal = overlay.create(BackupAndRestore);
 const changePasswordModal = overlay.create(ChangePassword);
 
 const logout = async () => {
+  emit("close");
   clearDEK();
+  await clearAllLocalVaultData();
+  if (import.meta.client && "caches" in window) {
+    try {
+      const cacheNames = await window.caches.keys();
+      await Promise.all(cacheNames.map((name) => window.caches.delete(name)));
+    } catch {}
+  }
   await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
   await clear();
-  reloadNuxtApp({ path: "/", force: true });
+  await navigateTo("/login", { replace: true });
 };
 
 const items = [
@@ -30,19 +40,19 @@ const items = [
   },
   {
     label: "Passkeys",
-    description: "Biometric sign-in and device management",
+    description: "Biometric sign-in and device keys",
     icon: "i-carbon-fingerprint-recognition",
     action: () => passkeysModal.open(),
   },
   {
     label: "Backup & Restore",
-    description: "Export encrypted backup or import",
+    description: "Export encrypted vault or import data",
     icon: "i-tabler-restore",
     action: () => backupAndRestoreModal.open(),
   },
   {
     label: "Change Password",
-    description: "Update your vault master password",
+    description: "Update your master vault password",
     icon: "i-heroicons-key-solid",
     action: () => changePasswordModal.open(),
   },
@@ -50,39 +60,42 @@ const items = [
 </script>
 
 <template>
-  <UModal title="Menu" description="Settings & Preferences">
+  <AdaptiveModal title="Settings & Menu" description="Preferences and vault management">
     <template #body>
       <div class="space-y-1.5">
         <button
           v-for="item in items"
           :key="item.label"
-          class="w-full flex items-center gap-3.5 p-3 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-900 border border-transparent hover:border-neutral-200 dark:hover:border-neutral-800 text-left transition-colors cursor-pointer"
+          type="button"
+          class="w-full flex items-center gap-3.5 p-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/60 border border-transparent hover:border-neutral-200/80 dark:hover:border-neutral-800/80 text-left transition-all cursor-pointer group"
           @click="item.action"
         >
-          <div class="size-8 rounded-md bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300">
-            <UIcon :name="item.icon" class="size-4.5 text-primary-600 dark:text-primary-400" />
+          <div class="size-9 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 group-hover:bg-primary-500/10 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+            <UIcon :name="item.icon" class="size-4.5" />
           </div>
           <div class="flex-1 min-w-0">
             <span class="block text-sm font-semibold text-neutral-900 dark:text-neutral-100">{{ item.label }}</span>
             <span class="block text-xs text-neutral-500 dark:text-neutral-400">{{ item.description }}</span>
           </div>
-          <UIcon name="i-lucide-chevron-right" class="size-4 text-neutral-400" />
+          <UIcon name="i-lucide-chevron-right" class="size-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
         </button>
 
         <USeparator class="my-2" />
 
         <button
-          class="w-full flex items-center gap-3.5 p-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 text-left transition-colors cursor-pointer"
+          type="button"
+          class="w-full flex items-center gap-3.5 p-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 text-left transition-colors cursor-pointer group"
           @click="logout"
         >
-          <div class="size-8 rounded-md bg-red-100 dark:bg-red-950/40 flex items-center justify-center text-red-600 dark:text-red-400">
+          <div class="size-9 rounded-lg bg-red-100 dark:bg-red-950/40 flex items-center justify-center text-red-600 dark:text-red-400">
             <UIcon name="i-solar-logout-outline" class="size-4.5" />
           </div>
-          <span class="text-sm font-semibold text-red-600 dark:text-red-400">Logout</span>
+          <div class="flex-1 min-w-0">
+            <span class="block text-sm font-semibold text-red-600 dark:text-red-400">Lock & Sign Out</span>
+            <span class="block text-xs text-neutral-500 dark:text-neutral-400">Clear memory key and sign out</span>
+          </div>
         </button>
       </div>
     </template>
-  </UModal>
+  </AdaptiveModal>
 </template>
-
-

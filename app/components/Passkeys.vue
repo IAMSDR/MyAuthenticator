@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdaptiveModal from "./AdaptiveModal.vue";
 import { h } from "vue";
 import type { TableColumn } from "@nuxt/ui";
 import { toast } from "@steveyuowo/vue-hot-toast";
@@ -125,7 +126,7 @@ const deletePasskey = async (id: string) => {
 </script>
 
 <template>
-  <UModal
+  <AdaptiveModal
     title="Passkeys"
     description="Manage biometric credentials and hardware keys"
   >
@@ -159,7 +160,7 @@ const deletePasskey = async (id: string) => {
         />
       </div>
     </template>
-  </UModal>
+  </AdaptiveModal>
 </template>
 
 

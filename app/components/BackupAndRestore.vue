@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdaptiveModal from "./AdaptiveModal.vue";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import { ensureOnline } from "~/utils/offline";
 
@@ -32,18 +33,15 @@ const downloadEncryptedBackupFile = async () => {
     loading.value = false;
     return;
   }
-  const { dek } = useEncryption();
+  const { dek, decryptAccounts } = useEncryption();
   if (!dek.value) {
     toast.update(toastId, { message: "Vault locked", type: "error" });
     loading.value = false;
     return;
   }
-  const plain: Accounts = [];
+  let plain: Accounts = [];
   try {
-    for (const a of raw.data.value as CipherAccount[]) {
-      const p = await decryptWithKey(a.secret, dek.value);
-      plain.push({ ...a, secret: p } as Account);
-    }
+    plain = await decryptAccounts(raw.data.value as CipherAccount[]);
   } catch {
     toast.update(toastId, { message: "Failed to decrypt accounts", type: "error" });
     loading.value = false;
@@ -87,18 +85,15 @@ const downloadUriListFile = async () => {
     loading.value = false;
     return;
   }
-  const { dek } = useEncryption();
+  const { dek, decryptAccounts } = useEncryption();
   if (!dek.value) {
     toast.update(toastId, { message: "Vault locked", type: "error" });
     loading.value = false;
     return;
   }
-  const plain: Accounts = [];
+  let plain: Accounts = [];
   try {
-    for (const a of raw.data.value as CipherAccount[]) {
-      const p = await decryptWithKey(a.secret, dek.value);
-      plain.push({ ...a, secret: p } as Account);
-    }
+    plain = await decryptAccounts(raw.data.value as CipherAccount[]);
   } catch {
     toast.update(toastId, { message: "Failed to decrypt accounts", type: "error" });
     loading.value = false;
@@ -129,16 +124,12 @@ const downloadUriListFile = async () => {
 
 const restoreFromEncryptedBackupFile = async () => {
   if (!ensureOnline("restore")) return;
-  const toastId = toast.loading("Restoring...");
-  loading.value = true;
   if (!file.value?.files?.[0]) {
-    toast.update(toastId, {
-      message: "No file selected",
-      type: "error",
-    });
-    loading.value = false;
+    toast.error("No file selected");
     return;
   }
+  const toastId = toast.loading("Restoring...");
+  loading.value = true;
   const fileContent = await readFileContent(file.value.files[0]);
   let accounts: Accounts = [];
   try {
@@ -161,51 +152,68 @@ const restoreFromEncryptedBackupFile = async () => {
     loading.value = false;
     return;
   }
-  const cipher: CipherAccount[] = [];
-  for (const acc of accounts) {
-    const { id: _o, ...remain } = acc as any;
-    const s = await encryptWithKey(remain.secret, dek.value);
-    cipher.push({
-      ...remain,
-      id: crypto.randomUUID(),
-      secret: s,
-      createdAt: new Date().toISOString(),
-    } as CipherAccount);
+  const now = new Date().toISOString();
+  let cipher: CipherAccount[] = [];
+  try {
+    cipher = await Promise.all(
+      accounts.map(async (acc) => {
+        const { id: _o, ...remain } = acc as any;
+        const s = await encryptWithKey(remain.secret, dek.value!);
+        return {
+          ...remain,
+          id: crypto.randomUUID(),
+          secret: s,
+          createdAt: now,
+        } as CipherAccount;
+      })
+    );
+  } catch {
+    toast.update(toastId, { message: "Encryption failed", type: "error" });
+    loading.value = false;
+    return;
   }
-  await $fetch("/api/accounts", {
+
+  const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
+  if (accountsData.value) {
+    accountsData.value = [...cipher, ...accountsData.value];
+  }
+
+  emit("close");
+  loading.value = false;
+
+  $fetch<{ status: number; message: string; version: number }>("/api/accounts", {
     method: "POST",
     body: cipher,
   })
     .then(async (res) => {
       toast.update(toastId, {
-        message: (res as any).message,
+        message: res.message || "Restored successfully",
         type: "success",
       });
-      await refreshNuxtData("accounts");
-      emit("close");
+      await upsertCachedAccounts(cipher, res.version, now);
     })
-    .catch((err) => {
+    .catch(async (err) => {
       toast.update(toastId, {
         message: err?.data?.message ?? String(err),
         type: "error",
       });
+      const addedIds = new Set(cipher.map((c) => c.id));
+      if (accountsData.value) {
+        accountsData.value = accountsData.value.filter((a) => !addedIds.has(a.id));
+      }
+      await refreshNuxtData("accounts");
       console.error(err);
     });
-  loading.value = false;
 };
 
 const restoreFromUriListFile = async () => {
   if (!ensureOnline("restore")) return;
-  const toastId = toast.loading("Restoring...");
-  loading.value = true;
   if (!file.value?.files?.[0]) {
-    toast.update(toastId, {
-      message: "No file selected",
-      type: "error",
-    });
-    loading.value = false;
+    toast.error("No file selected");
     return;
   }
+  const toastId = toast.loading("Restoring...");
+  loading.value = true;
   const fileContent = await readFileContent(file.value.files[0]);
   const accounts = await extractAccountsFromUriList(fileContent.split("\n"));
   if (!accounts?.length) {
@@ -222,41 +230,62 @@ const restoreFromUriListFile = async () => {
     loading.value = false;
     return;
   }
-  const cipher: CipherAccount[] = [];
-  for (const acc of accounts) {
-    const s = await encryptWithKey(acc.secret, dek.value);
-    cipher.push({
-      ...acc,
-      id: crypto.randomUUID(),
-      secret: s,
-      createdAt: new Date().toISOString(),
-    } as CipherAccount);
+  const now = new Date().toISOString();
+  let cipher: CipherAccount[] = [];
+  try {
+    cipher = await Promise.all(
+      accounts.map(async (acc) => {
+        const s = await encryptWithKey(acc.secret, dek.value!);
+        return {
+          ...acc,
+          id: crypto.randomUUID(),
+          secret: s,
+          createdAt: now,
+        } as CipherAccount;
+      })
+    );
+  } catch {
+    toast.update(toastId, { message: "Encryption failed", type: "error" });
+    loading.value = false;
+    return;
   }
-  await $fetch("/api/accounts", {
+
+  const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
+  if (accountsData.value) {
+    accountsData.value = [...cipher, ...accountsData.value];
+  }
+
+  emit("close");
+  loading.value = false;
+
+  $fetch<{ status: number; message: string; version: number }>("/api/accounts", {
     method: "POST",
     body: cipher,
   })
     .then(async (res) => {
       toast.update(toastId, {
-        message: (res as any).message,
+        message: res.message || "Restored successfully",
         type: "success",
       });
-      await refreshNuxtData("accounts");
-      emit("close");
+      await upsertCachedAccounts(cipher, res.version, now);
     })
-    .catch((err) => {
+    .catch(async (err) => {
       toast.update(toastId, {
         message: err?.data?.message ?? String(err),
         type: "error",
       });
+      const addedIds = new Set(cipher.map((c) => c.id));
+      if (accountsData.value) {
+        accountsData.value = accountsData.value.filter((a) => !addedIds.has(a.id));
+      }
+      await refreshNuxtData("accounts");
       console.error(err);
     });
-  loading.value = false;
 };
 </script>
 
 <template>
-  <UModal
+  <AdaptiveModal
     title="Backup & Restore"
     description="Export or import your encrypted authenticators"
   >
@@ -426,7 +455,7 @@ const restoreFromUriListFile = async () => {
         </div>
       </div>
     </template>
-  </UModal>
+  </AdaptiveModal>
 </template>
 
 

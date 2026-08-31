@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdaptiveModal from "./AdaptiveModal.vue";
 import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import { ensureOnline } from "~/utils/offline";
@@ -35,42 +36,63 @@ const updateIssuerAndIcon = () => {
 
 async function addAccount(event: FormSubmitEvent<Account>) {
   if (!ensureOnline("save this authenticator")) return;
-  loading.value = true;
-  const toastid = toast.loading("Saving...");
   const { dek } = useEncryption();
   if (!dek.value) {
-    toast.update(toastid, { message: "Vault locked: please login", type: "error" });
+    toast.error("Vault locked: please login");
+    return;
+  }
+  loading.value = true;
+  const now = new Date().toISOString();
+  let cipherSecret = "";
+  try {
+    cipherSecret = await encryptWithKey(event.data.secret, dek.value);
+  } catch (err) {
+    toast.error("Encryption failed");
     loading.value = false;
     return;
   }
-  const cipherSecret = await encryptWithKey(event.data.secret, dek.value);
+
   const cipherAccount: CipherAccount = {
     ...event.data,
     id: crypto.randomUUID(),
     secret: cipherSecret,
-    createdAt: new Date().toISOString(),
+    createdAt: now,
   } as CipherAccount;
 
-  await $fetch("/api/accounts", {
+  // Optimistically update memory so dashboard reflects change immediately
+  const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
+  if (accountsData.value) {
+    accountsData.value = [cipherAccount, ...accountsData.value];
+  }
+
+  // Dismiss modal immediately for instant UI feedback
+  emit("close");
+  loading.value = false;
+
+  const toastid = toast.loading("Saving...");
+  $fetch<{ status: number; message: string; version: number }>("/api/accounts", {
     method: "POST",
     body: [cipherAccount],
   })
     .then(async (res) => {
       toast.update(toastid, {
-        message: (res as any).message,
+        message: res.message || "Added successfully",
         type: "success",
       });
-      await refreshNuxtData("accounts");
-      emit("close");
+      await upsertCachedAccounts([cipherAccount], res.version, now);
     })
-    .catch((err) => {
+    .catch(async (err) => {
       toast.update(toastid, {
         message: err?.data?.message ?? String(err),
         type: "error",
       });
+      // Rollback on failure
+      if (accountsData.value) {
+        accountsData.value = accountsData.value.filter((a) => a.id !== cipherAccount.id);
+      }
+      await refreshNuxtData("accounts");
       console.error(err);
     });
-  loading.value = false;
 }
 
 async function onError(event: FormErrorEvent) {
@@ -83,7 +105,7 @@ watch(searchIssuerDebounced, async (query) => {
 </script>
 
 <template>
-  <UModal title="Setup using key" description="Enter secret key manually">
+  <AdaptiveModal title="Setup using key" description="Enter secret key manually">
     <template #body>
       <UForm
         :schema="accountSchema"
@@ -215,7 +237,7 @@ watch(searchIssuerDebounced, async (query) => {
         </div>
       </UForm>
     </template>
-  </UModal>
+  </AdaptiveModal>
 </template>
 
 

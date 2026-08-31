@@ -120,6 +120,7 @@ async function onError(event: FormErrorEvent) {
 
 <template>
   <div class="relative min-h-screen flex items-center justify-center p-4">
+    <!-- Interactive Cursor Glow active on Auth Pages -->
     <BackgroundGlow />
 
     <div class="w-full max-w-sm">
@@ -192,5 +193,3 @@ async function onError(event: FormErrorEvent) {
     </div>
   </div>
 </template>
-
-

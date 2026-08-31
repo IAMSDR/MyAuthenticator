@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdaptiveModal from "./AdaptiveModal.vue";
 import { QrcodeStream, QrcodeCapture } from "vue-qrcode-reader";
 import type { DetectedBarcode } from "barcode-detector/pure";
 import { toast } from "@steveyuowo/vue-hot-toast";
@@ -23,45 +24,68 @@ const extractAccountsFromQrCodeData = async (data: string) => {
 const onDetect = async (response: DetectedBarcode[]) => {
   for (const res of response) {
     if (!ensureOnline("add scanned authenticators")) return;
-    const toastId = toast.loading("Processing QR code...");
     const accounts: Accounts =
       (await extractAccountsFromQrCodeData(res.rawValue)) ?? [];
     if (!accounts.length) {
-      toast.update(toastId, { message: "Invalid QR code", type: "error" });
+      toast.error("Invalid QR code");
       return;
     }
     const { dek } = useEncryption();
     if (!dek.value) {
-      toast.update(toastId, { message: "Vault locked", type: "error" });
+      toast.error("Vault locked");
       return;
     }
-    const cipher: CipherAccount[] = [];
-    for (const acc of accounts) {
-      const s = await encryptWithKey(acc.secret, dek.value);
-      cipher.push({
-        ...acc,
-        id: crypto.randomUUID(),
-        secret: s,
-        createdAt: new Date().toISOString(),
-      } as CipherAccount);
+    const now = new Date().toISOString();
+    let cipher: CipherAccount[] = [];
+    try {
+      cipher = await Promise.all(
+        accounts.map(async (acc) => {
+          const s = await encryptWithKey(acc.secret, dek.value!);
+          return {
+            ...acc,
+            id: crypto.randomUUID(),
+            secret: s,
+            createdAt: now,
+          } as CipherAccount;
+        })
+      );
+    } catch {
+      toast.error("Encryption failed");
+      return;
     }
-    await $fetch("/api/accounts", {
+
+    // Optimistically update memory so dashboard reflects change immediately
+    const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
+    if (accountsData.value) {
+      accountsData.value = [...cipher, ...accountsData.value];
+    }
+
+    // Dismiss modal immediately for instant UI feedback
+    emit("close");
+
+    const toastId = toast.loading("Saving authenticators...");
+    $fetch<{ status: number; message: string; version: number }>("/api/accounts", {
       method: "POST",
       body: cipher,
     })
       .then(async (res) => {
         toast.update(toastId, {
-          message: (res as any).message,
+          message: res.message || "Added successfully",
           type: "success",
         });
-        await refreshNuxtData("accounts");
-        emit("close");
+        await upsertCachedAccounts(cipher, res.version, now);
       })
-      .catch((err) => {
+      .catch(async (err) => {
         toast.update(toastId, {
           message: err?.data?.message ?? String(err),
           type: "error",
         });
+        // Rollback on failure
+        const addedIds = new Set(cipher.map((c) => c.id));
+        if (accountsData.value) {
+          accountsData.value = accountsData.value.filter((a) => !addedIds.has(a.id));
+        }
+        await refreshNuxtData("accounts");
         console.error(err);
       });
   }
@@ -90,7 +114,7 @@ const onError = (error: Error) => {
 </script>
 
 <template>
-  <UModal title="Scan QR Code" description="Point your camera or upload a QR image">
+  <AdaptiveModal title="Scan QR Code" description="Point your camera or upload a QR image">
     <template #body>
       <div class="space-y-4">
         <div class="relative overflow-hidden rounded-lg bg-neutral-950 aspect-square flex items-center justify-center border border-neutral-800">
@@ -126,7 +150,7 @@ const onError = (error: Error) => {
         </div>
       </div>
     </template>
-  </UModal>
+  </AdaptiveModal>
 </template>
 
 

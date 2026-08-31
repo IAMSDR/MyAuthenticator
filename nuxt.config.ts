@@ -10,8 +10,13 @@ export default defineNuxtConfig({
   ],
   css: ["~/assets/css/main.css"],
   icon: {
-    serverBundle: "remote",
-    localApiEndpoint: "/_nuxt_icon/:collection",
+    serverBundle: "local",
+    clientBundle: {
+      scan: true,
+      sizeLimitKb: 512,
+    },
+    fallbackToApi: true,
+    iconifyApiEndpoint: "https://api.iconify.design",
   },
   runtimeConfig: {
     session: {
@@ -57,43 +62,19 @@ export default defineNuxtConfig({
       ],
     },
     workbox: {
-      globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
+      globPatterns: ["**/*.{js,css,png,svg,ico,woff2}"],
       maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-      // Secondary cache layer for the vault sync endpoints. The primary offline path
-      // is IndexedDB (app/utils/cache.ts); this gives a network-cache fallback so the
-      // meta/accounts responses are servable from the SW cache when offline.
-      runtimeCaching: [
-        {
-          urlPattern: ({ url }) => url.pathname === "/api/accounts/meta",
-          handler: "NetworkFirst",
-          options: {
-            cacheName: "accounts-meta",
-            networkTimeoutSeconds: 4,
-            cacheableResponse: { statuses: [0, 200] },
-          },
-        },
-        {
-          urlPattern: ({ url }) => url.pathname === "/api/accounts",
-          handler: "NetworkFirst",
-          options: {
-            cacheName: "accounts",
-            networkTimeoutSeconds: 4,
-            cacheableResponse: { statuses: [0, 200] },
-          },
-        },
-      ],
+      navigateFallback: null,
     },
     injectManifest: {
-      globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
+      globPatterns: ["**/*.{js,css,png,svg,ico,woff2}"],
     },
     client: {
       installPrompt: true,
     },
     devOptions: {
-      enabled: true,
+      enabled: false,
       suppressWarnings: true,
-      navigateFallback: "/",
-      navigateFallbackAllowlist: [/^\/$/],
       type: "module",
     },
   },

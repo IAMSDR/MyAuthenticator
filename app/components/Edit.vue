@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdaptiveModal from "./AdaptiveModal.vue";
 import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import { ensureOnline } from "~/utils/offline";
@@ -19,29 +20,45 @@ const loading = ref(false);
 
 async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
   if (!ensureOnline("save changes")) return;
-  loading.value = true;
+
+  const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
+  const prevSnapshot = accountsData.value ? [...accountsData.value] : [];
+
+  // Optimistically update memory so the tile reflects edits instantly
+  if (accountsData.value) {
+    accountsData.value = accountsData.value.map((acc) =>
+      acc.id === props.accountId ? { ...acc, ...event.data } : acc
+    );
+  }
+
+  // Dismiss modal immediately
+  emit("close");
+
   const toastid = toast.loading("Saving...");
-  await $fetch("/api/accounts", {
+  $fetch<{ status: number; message: string; version: number }>("/api/accounts", {
     method: "PATCH",
     query: { id: props.accountId },
     body: event.data,
   })
     .then(async (res) => {
       toast.update(toastid, {
-        message: (res as any).message,
+        message: res.message || "Updated successfully",
         type: "success",
       });
-      await refreshNuxtData("accounts");
-      emit("close");
+      await updateCachedAccountFields(props.accountId, event.data, res.version);
     })
-    .catch((err) => {
+    .catch(async (err) => {
       toast.update(toastid, {
         message: err?.data?.message ?? String(err),
         type: "error",
       });
+      // Rollback on failure
+      if (accountsData.value) {
+        accountsData.value = prevSnapshot;
+      }
+      await refreshNuxtData("accounts");
       console.error(err);
     });
-  loading.value = false;
 }
 
 async function onError(event: FormErrorEvent) {
@@ -54,7 +71,7 @@ watch(searchIconDebounced, async (query) => {
 </script>
 
 <template>
-  <UModal title="Edit Account" description="Update details for this authenticator">
+  <AdaptiveModal title="Edit Account" description="Update details for this authenticator">
     <template #body>
       <UForm
         :schema="accountEditSchema"
@@ -120,7 +137,7 @@ watch(searchIconDebounced, async (query) => {
         </div>
       </UForm>
     </template>
-  </UModal>
+  </AdaptiveModal>
 </template>
 
 

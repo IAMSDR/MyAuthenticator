@@ -7,6 +7,7 @@ type RedisClient = {
   del: (...keys: string[]) => Promise<number>;
   hgetall: (key: string) => Promise<Record<string, string> | null>;
   hget: (key: string, field: string) => Promise<string | null>;
+  hlen?: (key: string) => Promise<number>;
   hset: (key: string, fields: Record<string, string> | string, value?: string) => Promise<number | unknown>;
   hdel: (key: string, ...fields: string[]) => Promise<number>;
   hincrby: (key: string, field: string, increment: number) => Promise<number>;
@@ -31,6 +32,7 @@ function createUpstashClient(url: string, token: string): RedisClient {
     del: (...keys) => client.del(...keys) as Promise<number>,
     hgetall: (key) => client.hgetall(key) as Promise<Record<string, string> | null>,
     hget: (key, field) => client.hget(key, field) as Promise<string | null>,
+    hlen: (key) => client.hlen(key) as Promise<number>,
     hset: (key: string, fields: Record<string, string> | string, value?: string) => {
       if (typeof fields === "string" && value !== undefined) {
         return client.hset(key, { [fields]: value }) as Promise<number>;
@@ -89,6 +91,7 @@ function createIORedisClient(redisUrl: string): RedisClient {
       return Object.keys(res).length === 0 ? null : res;
     },
     hget: (key, field) => client.hget(key, field),
+    hlen: (key) => client.hlen(key),
     hset: (key, fields, value) => {
       if (typeof fields === "string" && value !== undefined) {
         return client.hset(key, fields, value);
@@ -200,10 +203,35 @@ export function challengeKey(attemptId: string) {
 export async function getAccountsMeta() {
   const redis = getRedis();
   const meta = await redis.hgetall(redisKeys.accountsMeta);
-  if (!meta || Object.keys(meta).length === 0) return null;
+  if (!meta || Object.keys(meta).length === 0) {
+    // If accounts:meta is not set, derive count from accounts hash directly
+    let actualCount = 0;
+    try {
+      if (redis.hlen) {
+        actualCount = await redis.hlen(redisKeys.accounts);
+      } else {
+        const all = await redis.hgetall(redisKeys.accounts);
+        actualCount = all ? Object.keys(all).length : 0;
+      }
+    } catch {}
+    return {
+      version: 0,
+      updatedAt: new Date(0).toISOString(),
+      count: actualCount,
+    };
+  }
+  let count = parseInt(meta.count ?? "0", 10);
+  if (isNaN(count) || count <= 0) {
+    try {
+      if (redis.hlen) {
+        const actualCount = await redis.hlen(redisKeys.accounts);
+        if (actualCount > 0) count = actualCount;
+      }
+    } catch {}
+  }
   return {
     version: parseInt(meta.version ?? "0", 10),
     updatedAt: meta.updatedAt ?? new Date(0).toISOString(),
-    count: parseInt(meta.count ?? "0", 10),
+    count,
   };
 }

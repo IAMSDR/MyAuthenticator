@@ -1,44 +1,42 @@
-import { getWrappedDEK } from "~/utils/cache";
 import { onlineNow } from "~/utils/offline";
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  const { loggedIn } = useUserSession();
+  const { isUnlocked } = useEncryption();
   const setupComplete = useState<boolean | null>("setupComplete", () => null);
 
-  // If user is already logged in, setup is guaranteed complete
-  if (loggedIn.value) {
-    setupComplete.value = true;
+  // 1. If vault is unlocked (DEK in memory), user is authorized for protected routes
+  if (isUnlocked.value) {
     if (to.path === "/login" || to.path === "/setup") {
       return navigateTo("/");
     }
     return;
   }
 
-  // Offline path: allow access so the user can unlock the cached vault locally.
-  // A cached wrapped DEK means a prior online login/setup stored it.
+  // 2. Offline path: if not unlocked, user must be on /login to unlock via cached wrapped DEK
   if (!onlineNow()) {
-    if (to.path === "/") {
-      const hasWrapped = Boolean((await getWrappedDEK("password")) || (await getWrappedDEK("prf")));
-      if (hasWrapped) return;
-    }
     if (to.path !== "/login") {
       return navigateTo("/login");
     }
     return;
   }
 
-  // Online & not logged in: check setupComplete only if not already cached in memory
+  // 3. Online path: Check setup status if not already known
   if (setupComplete.value === null) {
     try {
-      const status = await $fetch<{ setupComplete: boolean }>("/api/auth/status");
+      const status = await $fetch<{ setupComplete: boolean }>(
+        "/api/auth/status",
+      );
       setupComplete.value = Boolean(status?.setupComplete);
     } catch {
-      // If network fails to fetch status, assume setup is complete and let auth flow continue
-      setupComplete.value = true;
+      // On network/status error, fail safe to /login instead of assuming uninitialized setup
+      if (to.path !== "/login") {
+        return navigateTo("/login");
+      }
+      return;
     }
   }
 
-  // Setup is not complete -> only /setup is allowed
+  // 4. Setup is not complete -> only /setup is allowed
   if (!setupComplete.value) {
     if (to.path !== "/setup") {
       return navigateTo("/setup");
@@ -46,12 +44,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return;
   }
 
-  // Setup is complete -> /setup is not allowed
+  // 5. Setup is complete -> /setup is not allowed
   if (to.path === "/setup") {
     return navigateTo("/login");
   }
 
-  // If not logged in and trying to access protected route -> go to /login
+  // 6. Vault is locked (whether loggedIn is true or false) -> enforce /login
+  // This allows /login to act as the unlock view when user reloads or has an active session.
   if (to.path !== "/login") {
     return navigateTo("/login");
   }

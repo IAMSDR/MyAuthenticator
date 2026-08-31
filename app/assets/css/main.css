@@ -32,27 +32,36 @@ body {
 
 /* slide transitions */
 .slide-enter-active,
-.slide2-enter-active,
 .slide-leave-active,
+.slide2-enter-active,
 .slide2-leave-active {
   @apply transition-all duration-300 ease-in-out;
 }
 
 .slide-enter-from,
-.slide2-enter-from,
 .slide-leave-to {
   @apply opacity-0 translate-x-10;
 }
-.slide2-leave-to {
-  @apply opacity-0 -translate-x-10;
-}
+
 .slide-enter-to,
-.slide2-enter-to,
 .slide-leave-from {
   @apply opacity-100 translate-x-0;
 }
+
+.slide2-enter-from {
+  @apply opacity-0 translate-x-6;
+}
+
+.slide2-enter-to {
+  @apply opacity-100 translate-x-0;
+}
+
 .slide2-leave-from {
-  @apply opacity-100 -translate-x-0;
+  @apply opacity-100 translate-x-0;
+}
+
+.slide2-leave-to {
+  @apply opacity-0 -translate-x-6;
 }
 
 .slidey-enter-active,

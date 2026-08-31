@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdaptiveModal from "./AdaptiveModal.vue";
 import QrcodeVue from "qrcode.vue";
 import type { RenderAs, Level } from "qrcode.vue";
 
@@ -11,7 +12,7 @@ const renderAs = ref<RenderAs>("svg");
 </script>
 
 <template>
-  <UModal title="Share Account" description="Scan QR code with another authenticator app">
+  <AdaptiveModal title="Share Account" description="Scan QR code with another authenticator app">
     <template #body>
       <div class="flex-center flex-col pb-2 space-y-4">
         <div
@@ -36,7 +37,7 @@ const renderAs = ref<RenderAs>("svg");
         </span>
       </div>
     </template>
-  </UModal>
+  </AdaptiveModal>
 </template>
 
 

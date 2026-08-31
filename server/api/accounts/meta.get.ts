@@ -1,6 +1,5 @@
 export default eventHandler(async () => {
   const meta = await getAccountsMeta();
-  // Fold order into the meta response so cold load is 2 requests (meta + accounts) not 3.
   const redis = getRedis();
   const rawOrder = await redis.get(redisKeys.accountsOrder);
   let order: string[] = [];
@@ -13,7 +12,15 @@ export default eventHandler(async () => {
     }
   }
   if (!meta) {
-    return { version: 0, updatedAt: new Date(0).toISOString(), count: 0, order };
+    let actualCount = 0;
+    try {
+      if (redis.hlen) actualCount = await redis.hlen(redisKeys.accounts);
+      else {
+        const all = await redis.hgetall(redisKeys.accounts);
+        actualCount = all ? Object.keys(all).length : 0;
+      }
+    } catch {}
+    return { version: 0, updatedAt: new Date(0).toISOString(), count: actualCount, order };
   }
   return { ...meta, order };
 });

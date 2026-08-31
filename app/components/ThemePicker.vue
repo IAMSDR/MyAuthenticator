@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdaptiveModal from "./AdaptiveModal.vue";
 import colors from "tailwindcss/colors";
 import { omit } from "#ui/utils";
 
@@ -77,7 +78,7 @@ function setBlackAsPrimary(value: boolean) {
 </script>
 
 <template>
-  <UModal
+  <AdaptiveModal
     title="Theme & Style"
     description="Customize colors, radius and appearance"
   >
@@ -163,7 +164,7 @@ function setBlackAsPrimary(value: boolean) {
         </div>
       </div>
     </template>
-  </UModal>
+  </AdaptiveModal>
 </template>
 
 

@@ -13,7 +13,7 @@
     "db:generate": "echo \"removed drizzle\""
   },
   "dependencies": {
-    "@iconify/json": "^2.2.317",
+    "@iconify-json/lucide": "^1.2.128",
     "@nuxt/ui": "^4.11.0",
     "@simplewebauthn/browser": "^13.1.0",
     "@simplewebauthn/server": "^13.1.1",

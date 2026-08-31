@@ -7,11 +7,9 @@ export const getIcons = async (query: string) => {
     {
       query: {
         query: query,
-        limit: 999,
-        prefixes:
-          "logos,simple-icons,devicon,token-branded,mdi,ri,line-icons,articons,teeny-icons,mingcute",
+        limit: 20,
       },
-    }
+    },
   ).then((res) => {
     if (!res.icons.length)
       return [
@@ -30,12 +28,12 @@ export const getIcons = async (query: string) => {
 
 export const matchIcon = async (query: string) => {
   const icon = query.toLowerCase().trim();
-  return await $fetch<string>("/_nuxt_icon/:collection/simple-icons.json", {
+  return await $fetch<string>("/_nuxt_icon/:collection/thesvg-color.json", {
     query: {
       icons: icon,
     },
     async onResponse({ response }) {
-      if (response.status === 200) response._data = `i-simple-icons-${icon}`;
+      if (response.status === 200) response._data = `i-thesvg-color-${icon}`;
       else response._data = defaultIcon;
     },
   });
@@ -77,7 +75,7 @@ export const extractAccountsFromGoogleUri = async (uri: string) => {
   let otpParameters: Payload_OtpParameters[] = [];
   try {
     const payload = Payload.decode(
-      Uint8Array.from(atob(data), (c) => c.charCodeAt(0))
+      Uint8Array.from(atob(data), (c) => c.charCodeAt(0)),
     );
 
     otpParameters = payload.otpParameters;
@@ -113,7 +111,7 @@ export const extractAccountsFromGoogleUri = async (uri: string) => {
       secret: new OTPAuth.Secret({
         buffer: otp.secret.buffer.slice(
           otp.secret.byteOffset,
-          otp.secret.byteOffset + otp.secret.byteLength
+          otp.secret.byteOffset + otp.secret.byteLength,
         ),
       }).base32,
       algorithm: algorithm,

@@ -2,6 +2,7 @@
 import { toast } from "@steveyuowo/vue-hot-toast";
 import { set } from "idb-keyval";
 import BackgroundGlow from "~/components/BackgroundGlow.vue";
+import AdaptiveModal from "~/components/AdaptiveModal.vue";
 
 const { fetch: refreshSession } = useUserSession();
 const { setDEK } = useEncryption();
@@ -77,6 +78,7 @@ const onConfirm = async () => {
 
 <template>
   <div class="relative min-h-screen flex items-center justify-center p-4">
+    <!-- Interactive Cursor Glow active on Setup -->
     <BackgroundGlow />
 
     <div class="w-full max-w-sm">
@@ -145,15 +147,15 @@ const onConfirm = async () => {
             </div>
           </UFormField>
 
-          <UButton type="submit" block size="md" class="h-10 mt-2" :disabled="loading">
+          <UButton type="submit" block size="md" class="h-10 mt-2 cursor-pointer" :disabled="loading">
             Create account
           </UButton>
         </form>
       </UCard>
     </div>
 
-    <!-- Confirmation Modal leveraging NuxtUI app.config styles -->
-    <UModal
+    <!-- Confirmation Adaptive Modal (Desktop Modal / Mobile Drawer) -->
+    <AdaptiveModal
       v-model:open="showConfirmModal"
       title="Confirm account creation"
       description="Important security warning"
@@ -184,11 +186,12 @@ const onConfirm = async () => {
           </UFormField>
 
           <div class="flex gap-2 justify-end pt-1">
-            <UButton color="neutral" variant="ghost" size="sm" :disabled="loading" @click="showConfirmModal = false">
+            <UButton color="neutral" variant="ghost" size="sm" class="cursor-pointer" :disabled="loading" @click="showConfirmModal = false">
               Cancel
             </UButton>
             <UButton
               size="sm"
+              class="cursor-pointer"
               :disabled="confirmText.trim().toLowerCase() !== 'i confirm'"
               :loading="loading"
               @click="onConfirm"
@@ -198,6 +201,6 @@ const onConfirm = async () => {
           </div>
         </div>
       </template>
-    </UModal>
+    </AdaptiveModal>
   </div>
 </template>

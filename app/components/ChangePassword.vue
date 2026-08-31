@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AdaptiveModal from "./AdaptiveModal.vue";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import { ensureOnline } from "~/utils/offline";
 
@@ -51,7 +52,7 @@ const onSubmit = async () => {
 </script>
 
 <template>
-  <UModal
+  <AdaptiveModal
     title="Change Password"
     description="Update your master encryption password"
   >
@@ -117,7 +118,7 @@ const onSubmit = async () => {
         </div>
       </form>
     </template>
-  </UModal>
+  </AdaptiveModal>
 </template>
 
 
