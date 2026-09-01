@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import colors from "tailwindcss/colors";
 
-const props = defineProps<{
+defineProps<{
   label: string;
   icon?: string;
   chip?: string;

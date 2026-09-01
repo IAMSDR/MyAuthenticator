@@ -32,7 +32,7 @@ const showSearchBar = useState("searchBar", () => false);
         />
         <!-- Top rim light — accent tinted, subtle -->
         <div
-          class="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary-500/50 to-transparent dark:via-primary-400/40"
+          class="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-(--ui-primary)/50 to-transparent dark:via-(--ui-primary)/40"
         />
         <!-- Bottom inner shadow for depth -->
         <div
@@ -56,7 +56,7 @@ const showSearchBar = useState("searchBar", () => false);
         <button
           type="button"
           aria-label="Add account"
-          class="group relative flex items-center justify-center size-[54px] -mt-7 rounded-full bg-gradient-to-br from-primary-400 via-primary-600 to-primary-700 text-white active:scale-95 transition-all duration-150 focus-visible:outline-none ring-4 ring-white/70 dark:ring-neutral-950/70 shadow-lg shadow-primary-600/30 dark:shadow-primary-500/25"
+          class="group relative flex items-center justify-center size-[54px] -mt-7 rounded-full bg-(--ui-primary) text-white active:scale-95 transition-all duration-150 focus-visible:outline-none ring-4 ring-white/70 dark:ring-neutral-950/70 shadow-lg shadow-(--ui-primary)/30 dark:shadow-(--ui-primary)/25 cursor-pointer"
           @click="addModal.open()"
         >
           <UIcon
@@ -70,9 +70,9 @@ const showSearchBar = useState("searchBar", () => false);
           type="button"
           :aria-label="showSearchBar ? 'Close search' : 'Search'"
           :class="[
-            'group flex items-center justify-center size-12 rounded-2xl active:scale-90 transition-all duration-150 focus-visible:outline-none',
+            'group flex items-center justify-center size-12 rounded-2xl active:scale-90 transition-all duration-150 focus-visible:outline-none cursor-pointer',
             showSearchBar
-              ? 'bg-primary-600/15 dark:bg-primary-400/20 text-primary-600 dark:text-primary-400'
+              ? 'bg-(--ui-primary)/15 text-(--ui-primary)'
               : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-black/[0.06] dark:hover:bg-white/[0.1]',
           ]"
           @click="showSearchBar = !showSearchBar"

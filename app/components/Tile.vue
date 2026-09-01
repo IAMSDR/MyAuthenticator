@@ -154,8 +154,8 @@ onUnmounted(() => {
         <div class="h-full flex items-center mt-2 pb-1">
           <UTooltip text="Click to copy" class="cursor-pointer">
             <span
+              class="text-3xl text-neutral-900 dark:text-neutral-100 font-mono font-medium tracking-wide hover:text-(--ui-primary) transition-colors cursor-pointer"
               @click="copyToken"
-              class="text-3xl text-neutral-900 dark:text-neutral-100 font-mono font-medium tracking-wide hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
               >{{ token }}</span
             >
           </UTooltip>

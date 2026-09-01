@@ -126,11 +126,11 @@ const onError = (error: Error) => {
             @error="onError"
           >
             <div v-if="state.loading" class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-neutral-950 text-white">
-              <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-primary-500" />
+              <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-(--ui-primary)" />
               <span class="text-xs text-neutral-400">Starting camera...</span>
             </div>
             <div v-else class="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div class="size-40 rounded-lg border-2 border-primary-500/70 shadow-[0_0_15px_rgba(34,197,94,0.3)]" />
+              <div class="size-40 rounded-lg border-2 border-(--ui-primary)/70 shadow-[0_0_15px_color-mix(in_oklab,var(--ui-primary)_30%,transparent)]" />
             </div>
           </QrcodeStream>
           <div v-else class="text-center p-6 space-y-2">

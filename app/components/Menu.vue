@@ -70,7 +70,7 @@ const items = [
           class="w-full flex items-center gap-3.5 p-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/60 border border-transparent hover:border-neutral-200/80 dark:hover:border-neutral-800/80 text-left transition-all cursor-pointer group"
           @click="item.action"
         >
-          <div class="size-9 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 group-hover:bg-primary-500/10 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+          <div class="size-9 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 group-hover:bg-(--ui-primary)/10 group-hover:text-(--ui-primary) transition-colors">
             <UIcon :name="item.icon" class="size-4.5" />
           </div>
           <div class="flex-1 min-w-0">

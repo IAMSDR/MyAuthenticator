@@ -29,7 +29,7 @@ const openQrscan = () => {
           class="w-full flex items-center gap-3.5 p-3.5 rounded-xl border border-neutral-200/80 dark:border-neutral-800/80 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 hover:border-neutral-300 dark:hover:border-neutral-700 text-left transition-all cursor-pointer group"
           @click="openQrscan"
         >
-          <div class="size-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 group-hover:bg-primary-500/10 transition-colors">
+          <div class="size-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 group-hover:text-(--ui-primary) group-hover:bg-(--ui-primary)/10 transition-colors">
             <UIcon name="i-lucide-qr-code" class="size-5" />
           </div>
           <div class="flex-1 min-w-0">
@@ -44,7 +44,7 @@ const openQrscan = () => {
           class="w-full flex items-center gap-3.5 p-3.5 rounded-xl border border-neutral-200/80 dark:border-neutral-800/80 hover:bg-neutral-50 dark:hover:bg-neutral-800/60 hover:border-neutral-300 dark:hover:border-neutral-700 text-left transition-all cursor-pointer group"
           @click="openForm"
         >
-          <div class="size-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 group-hover:bg-primary-500/10 transition-colors">
+          <div class="size-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300 group-hover:text-(--ui-primary) group-hover:bg-(--ui-primary)/10 transition-colors">
             <UIcon name="i-lucide-key-round" class="size-5" />
           </div>
           <div class="flex-1 min-w-0">

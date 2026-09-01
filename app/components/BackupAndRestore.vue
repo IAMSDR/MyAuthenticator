@@ -298,7 +298,7 @@ const restoreFromUriListFile = async () => {
             @click="handleChosen(1)"
           >
             <div class="flex items-center gap-3">
-              <UIcon name="i-lucide-shield-check" class="size-5 text-primary-600 dark:text-primary-400" />
+              <UIcon name="i-lucide-shield-check" class="size-5 text-(--ui-primary)" />
               <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Export Encrypted Backup</span>
             </div>
             <UIcon
@@ -340,7 +340,7 @@ const restoreFromUriListFile = async () => {
             @click="handleChosen(2)"
           >
             <div class="flex items-center gap-3">
-              <UIcon name="i-lucide-file-text" class="size-5 text-primary-600 dark:text-primary-400" />
+              <UIcon name="i-lucide-file-text" class="size-5 text-(--ui-primary)" />
               <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Export Plain URI List</span>
             </div>
             <UIcon

@@ -62,7 +62,7 @@ onKeyStroke("Escape", () => {
         <button
           type="button"
           aria-label="Add account"
-          class="inline-flex items-center gap-1.5 h-8 pl-3 pr-3.5 rounded-full bg-primary-600 hover:bg-primary-500 active:bg-primary-700 active:scale-[0.97] text-white shadow-sm shadow-primary-600/20 text-[13px] font-semibold tracking-tight transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
+          class="inline-flex items-center gap-1.5 h-8 pl-3 pr-3.5 rounded-full bg-(--ui-primary) hover:brightness-110 active:brightness-90 active:scale-[0.97] text-white shadow-sm shadow-(--ui-primary)/20 text-[13px] font-semibold tracking-tight transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--ui-primary)/30 cursor-pointer"
           @click="addModal.open()"
         >
           <UIcon name="i-lucide-plus" class="size-3.5 stroke-[2.6]" />
