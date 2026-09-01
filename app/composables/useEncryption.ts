@@ -68,11 +68,21 @@ export const useEncryption = () => {
     }
   };
 
-  // Clear on logout / beforeunload
+  // Clear DEK from memory on page unload. Previously this used onMounted/
+  // onUnmounted which warns when the composable is called outside a component
+  // setup (e.g. from middleware `auth.global.ts`). `beforeunload` is a global
+  // window event — register it once directly without lifecycle hooks.
   if (import.meta.client) {
-    const onBeforeUnload = () => clearDEK();
-    onMounted(() => window.addEventListener("beforeunload", onBeforeUnload));
-    onUnmounted(() => window.removeEventListener("beforeunload", onBeforeUnload));
+    // Use a module-level flag so multiple calls to useEncryption() don't
+    // stack duplicate listeners (the composable is used in ~10 places).
+    const g = globalThis as unknown as { __dekBeforeUnloadRegistered?: boolean };
+    if (!g.__dekBeforeUnloadRegistered) {
+      g.__dekBeforeUnloadRegistered = true;
+      window.addEventListener("beforeunload", () => {
+        // Clear via useState directly so the handler doesn't close over a stale ref
+        useState<CryptoKey | null>("dek", () => null).value = null;
+      });
+    }
   }
 
   return { dek, isUnlocked, setDEK, clearDEK, decryptAccounts, encryptSecret, unlockWithPassword, unlockWithPrf };

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{
+import colors from "tailwindcss/colors";
+
+const props = defineProps<{
   label: string;
   icon?: string;
   chip?: string;
@@ -23,9 +25,9 @@ defineProps<{
           class="inline-block size-2 rounded-full"
           :class="`bg-(--color-light) dark:bg-(--color-dark)`"
           :style="{
-            '--color-light': `var(--color-${chip}-500)`,
-            '--color-dark': `var(--color-${chip}-400)`,
-          }"
+            '--color-light': (colors as any)[chip === 'old-neutral' ? 'neutral' : chip]?.[500] ?? `var(--color-${chip}-500)`,
+            '--color-dark': (colors as any)[chip === 'old-neutral' ? 'neutral' : chip]?.[400] ?? `var(--color-${chip}-400)`,
+          } as any"
         />
       </slot>
     </template>

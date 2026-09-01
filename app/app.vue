@@ -19,6 +19,9 @@ const blackAsPrimary = computed(() =>
     ? `:root { --ui-primary: black; } .dark { --ui-primary: white; }`
     : ":root {}"
 );
+// font style tag must exist for FOUC script (docs/app/plugins/theme.ts) to query
+// default is Public Sans; ThemePicker + plugin will overwrite when persisting
+const font = computed(() => `:root { --font-sans: 'Public Sans', sans-serif; }`);
 
 useHead({
   meta: [
@@ -32,6 +35,7 @@ useHead({
       id: "nuxt-ui-black-as-primary",
       tagPriority: -2,
     },
+    { innerHTML: font, id: "nuxt-ui-font", tagPriority: -2 },
   ],
   title: "MyAuthenticator",
   htmlAttrs: {
