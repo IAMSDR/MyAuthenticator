@@ -22,12 +22,12 @@ if (import.meta.client) {
     <div
       class="absolute inset-0 transition-[background] duration-200 ease-out"
       :style="{
-        background: `radial-gradient(600px circle at ${glowX}% ${glowY}%, var(--glow-color, rgba(34, 197, 94, 0.08)), transparent 75%)`
+        background: `radial-gradient(600px circle at ${glowX}% ${glowY}%, color-mix(in oklab, var(--ui-primary) 8%, transparent), transparent 75%)`
       }"
     />
 
-    <!-- Ambient top glow -->
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,197,94,0.04),transparent_60%)]" />
+    <!-- Ambient top glow — accent tinted -->
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklab,var(--ui-primary)_4%,transparent),transparent_60%)]" />
 
     <!-- Dot matrix texture -->
     <div
