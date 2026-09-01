@@ -33,7 +33,7 @@ const columns: TableColumn<Passkey>[] = [
         color: "error",
         variant: "ghost",
         size: "xs",
-        icon: "i-heroicons-trash-16-solid",
+        icon: "i-lucide-trash-2",
         disabled: loading.value,
         onClick: () => deletePasskey(row.original.id),
       }),
@@ -143,7 +143,7 @@ const deletePasskey = async (id: string) => {
           />
           <UButton
             type="submit"
-            icon="i-heroicons-plus-16-solid"
+            icon="i-lucide-plus"
             size="md"
             :loading="loading"
             :disabled="loading"

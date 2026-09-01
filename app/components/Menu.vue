@@ -35,25 +35,25 @@ const items = [
   {
     label: "Theme & Style",
     description: "Customize appearance and colors",
-    icon: "i-solar-palette-round-bold",
+    icon: "i-lucide-palette",
     action: () => themePickerModal.open(),
   },
   {
     label: "Passkeys",
     description: "Biometric sign-in and device keys",
-    icon: "i-carbon-fingerprint-recognition",
+    icon: "i-lucide-fingerprint",
     action: () => passkeysModal.open(),
   },
   {
     label: "Backup & Restore",
     description: "Export encrypted vault or import data",
-    icon: "i-tabler-restore",
+    icon: "i-lucide-archive-restore",
     action: () => backupAndRestoreModal.open(),
   },
   {
     label: "Change Password",
     description: "Update your master vault password",
-    icon: "i-heroicons-key-solid",
+    icon: "i-lucide-key-round",
     action: () => changePasswordModal.open(),
   },
 ];
@@ -88,7 +88,7 @@ const items = [
           @click="logout"
         >
           <div class="size-9 rounded-lg bg-red-100 dark:bg-red-950/40 flex items-center justify-center text-red-600 dark:text-red-400">
-            <UIcon name="i-solar-logout-outline" class="size-4.5" />
+            <UIcon name="i-lucide-log-out" class="size-4.5" />
           </div>
           <div class="flex-1 min-w-0">
             <span class="block text-sm font-semibold text-red-600 dark:text-red-400">Lock & Sign Out</span>

@@ -177,7 +177,7 @@ async function onError(event: FormErrorEvent) {
           <USeparator label="or" color="neutral" size="sm" :ui="{ root: 'my-3' }" />
 
           <UButton
-            icon="i-carbon-fingerprint-recognition"
+            icon="i-lucide-fingerprint"
             variant="soft"
             color="primary"
             block

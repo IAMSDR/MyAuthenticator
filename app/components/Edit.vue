@@ -11,10 +11,10 @@ const emit = defineEmits(["close"]);
 const state = reactive<AccountEdit>({ ...props.account });
 
 const searchIcon = ref("");
-
 const searchIconDebounced = refDebounced(searchIcon, 300);
 
 const icons = ref<Icon[]>([]);
+const searchingIcons = ref(false);
 
 const loading = ref(false);
 
@@ -66,7 +66,17 @@ async function onError(event: FormErrorEvent) {
 }
 
 watch(searchIconDebounced, async (query) => {
-  icons.value = await getIcons(query);
+  if (!query?.trim()) {
+    icons.value = [];
+    searchingIcons.value = false;
+    return;
+  }
+  searchingIcons.value = true;
+  try {
+    icons.value = await getIcons(query);
+  } finally {
+    searchingIcons.value = false;
+  }
 });
 </script>
 
@@ -87,13 +97,27 @@ watch(searchIconDebounced, async (query) => {
             ignore-filter
             :items="icons || []"
             :icon="state.icon"
-            :placeholder="state.issuer"
+            :loading="searchingIcons"
+            :placeholder="state.issuer || 'Search icon'"
             size="md"
             value-key="icon"
             required
+            class="w-full"
             :ui="{ base: 'h-10' }"
           >
-            <template #empty>Type something to search</template>
+            <template #item-leading="{ item }">
+              <UIcon :name="item.icon" class="size-4 shrink-0" />
+            </template>
+            <template #item-trailing="{ item }">
+              <span v-if="item.description" class="text-[10px] uppercase font-mono text-neutral-400 dark:text-neutral-500">
+                {{ item.description }}
+              </span>
+            </template>
+            <template #empty>
+              <span v-if="searchingIcons">Searching icons...</span>
+              <span v-else-if="searchIcon">No icons found for "{{ searchIcon }}"</span>
+              <span v-else>Type to search brand or icon</span>
+            </template>
           </UInputMenu>
         </UFormField>
 
@@ -102,7 +126,7 @@ watch(searchIconDebounced, async (query) => {
             v-model="state.issuer"
             size="md"
             required
-            icon="i-heroicons-building-office-2"
+            icon="i-lucide-building-2"
             :ui="{ base: 'h-10' }"
           />
         </UFormField>
@@ -112,7 +136,7 @@ watch(searchIconDebounced, async (query) => {
             v-model="state.label"
             size="md"
             required
-            icon="i-heroicons-envelope"
+            icon="i-lucide-mail"
             :ui="{ base: 'h-10' }"
           />
         </UFormField>

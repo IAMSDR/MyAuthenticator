@@ -105,6 +105,7 @@ export const cacheSchema = z.object({
 export const iconSchema = z.object({
   label: z.string(),
   icon: z.string(),
+  description: z.string().optional(),
 });
 
 export const passkeyUser = z.object({

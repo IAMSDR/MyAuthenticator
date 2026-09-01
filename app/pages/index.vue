@@ -85,9 +85,9 @@ const accounts = computed(() => {
 
     <main class="flex-1 w-full pb-24 md:pb-12">
       <UContainer class="py-6">
-        <!-- Mobile Dropdown Search Field (Active when toggled on mobile) -->
+        <!-- Mobile minimal search — expands below header -->
         <Transition name="slidey">
-          <div v-if="showSearchBar" class="md:hidden mb-4">
+          <div v-if="showSearchBar" class="md:hidden -mx-4 sm:-mx-6 lg:-mx-8 -mt-2 mb-2">
             <Search v-model:modal-value="searchQuery" />
           </div>
         </Transition>
@@ -98,7 +98,7 @@ const accounts = computed(() => {
           class="min-h-[50vh] flex flex-col items-center justify-center space-y-3 text-center"
         >
           <div class="size-16 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-400">
-            <UIcon name="i-heroicons-inbox-stack" class="size-8" />
+            <UIcon name="i-lucide-inbox" class="size-8" />
           </div>
           <h2 class="text-base sm:text-lg font-bold text-neutral-900 dark:text-neutral-100">No accounts stored yet</h2>
           <p class="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm">
@@ -122,7 +122,7 @@ const accounts = computed(() => {
         <!-- Responsive Spacious Accounts Grid -->
         <div
           v-else
-          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5"
+          class="grid grid-cols-1 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4.5"
         >
           <Tile v-for="account in accounts" :key="account.id" :account="account" />
         </div>

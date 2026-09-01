@@ -2,41 +2,75 @@ import * as OTPAuth from "otpauth";
 import { Payload, type Payload_OtpParameters } from "./proto/google";
 
 export const getIcons = async (query: string) => {
-  return await $fetch<{ icons: string[] }>(
-    "https://api.iconify.design/search",
-    {
-      query: {
-        query: query,
-        limit: 20,
+  const clean = query?.trim();
+  if (!clean) return [];
+
+  try {
+    const res = await $fetch<{ icons: string[] }>(
+      "https://api.iconify.design/search",
+      {
+        query: {
+          query: clean,
+          limit: 30,
+        },
       },
-    },
-  ).then((res) => {
-    if (!res.icons.length)
+    );
+
+    if (!res.icons || !res.icons.length) {
       return [
         {
-          label: query,
+          label: clean,
           icon: defaultIcon,
         },
       ];
-    else
-      return res.icons.map((icon) => ({
-        label: icon.split(":")[1]?.split("-")[0]!,
-        icon: `i-${icon.replace(":", "-")}`,
-      }));
-  });
+    }
+
+    return res.icons.map((icon) => {
+      const parts = icon.split(":");
+      const collection = parts[0];
+      const name = parts[1] || "";
+      return {
+        label: name.replace(/[-_]/g, " "),
+        description: collection,
+        icon: `i-${collection}-${name}`,
+      };
+    });
+  } catch {
+    return [
+      {
+        label: clean,
+        icon: defaultIcon,
+      },
+    ];
+  }
 };
 
 export const matchIcon = async (query: string) => {
-  const icon = query.toLowerCase().trim();
-  return await $fetch<string>("/_nuxt_icon/:collection/thesvg-color.json", {
-    query: {
-      icons: icon,
-    },
-    async onResponse({ response }) {
-      if (response.status === 200) response._data = `i-thesvg-color-${icon}`;
-      else response._data = defaultIcon;
-    },
-  });
+  const icon = query?.toLowerCase().trim();
+  if (!icon) return defaultIcon;
+
+  try {
+    const res = await $fetch<{ icons: string[] }>(
+      "https://api.iconify.design/search",
+      {
+        query: {
+          query: icon,
+          collection: "simple-icons",
+          limit: 10,
+        },
+      },
+    );
+
+    if (res.icons && res.icons.length > 0) {
+      const match =
+        res.icons.find((i) => i.startsWith("simple-icons:")) || res.icons[0];
+      if (match) {
+        return `i-${match.replace(":", "-")}`;
+      }
+    }
+  } catch {}
+
+  return defaultIcon;
 };
 
 export const extractAccountsFromUriList = async (uriList: string[]) => {

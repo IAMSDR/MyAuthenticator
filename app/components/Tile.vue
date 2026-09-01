@@ -165,7 +165,7 @@ onUnmounted(() => {
         <UIcon
           class="cursor-pointer h-6 w-6 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 duration-300"
           :class="showOptions && `rotate-180`"
-          name="i-heroicons-chevron-right-16-solid"
+          name="i-lucide-chevron-right"
           @click="optionsToggleHandler"
         />
       </div>
@@ -190,7 +190,7 @@ onUnmounted(() => {
               >
                 <div class="flex-center flex-col space-y-2 p-2">
                   <UButton
-                    icon="i-heroicons-pencil-solid"
+                    icon="i-lucide-pencil"
                     variant="soft"
                     size="md"
                     color="neutral"
@@ -201,7 +201,7 @@ onUnmounted(() => {
                 </div>
                 <div class="flex-center flex-col space-y-2 p-2">
                   <UButton
-                    icon="i-heroicons-qr-code-solid"
+                    icon="i-lucide-qr-code"
                     variant="soft"
                     size="md"
                     color="neutral"
@@ -212,7 +212,7 @@ onUnmounted(() => {
                 </div>
                 <div class="flex-center flex-col space-y-2 p-2">
                   <UButton
-                    icon="i-heroicons-trash-20-solid"
+                    icon="i-lucide-trash-2"
                     variant="soft"
                     size="md"
                     color="error"
@@ -237,7 +237,7 @@ onUnmounted(() => {
                   @click="deleteConfirmation = false"
                 />
                 <UButton
-                  icon="i-heroicons-trash-20-solid"
+                  icon="i-lucide-trash-2"
                   variant="soft"
                   size="md"
                   color="error"

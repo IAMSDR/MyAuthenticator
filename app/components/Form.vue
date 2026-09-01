@@ -12,7 +12,7 @@ const state = reactive<Account>({
   secret: "",
   algorithm: "SHA1",
   label: "",
-  icon: "i-simple-icons-google",
+  icon: defaultIcon,
   digits: 6,
   period: 30,
   counter: 0,
@@ -20,18 +20,23 @@ const state = reactive<Account>({
 
 const searchIssuer = ref("");
 const searchIssuerDebounced = refDebounced(searchIssuer, 300);
-const selectedIssuer = ref<{ label: string; icon: string }>();
+const selectedIssuer = ref<{ label: string; icon: string; description?: string }>();
 
 const showAdvanced = ref(false);
 
 const loading = ref(false);
+const searchingIcons = ref(false);
 
 const icons = ref<Icon[]>([]);
 
-const updateIssuerAndIcon = () => {
-  if (!selectedIssuer.value) return;
-  state.icon = selectedIssuer.value.icon;
-  state.issuer = selectedIssuer.value.label;
+const updateIssuerAndIcon = (val: Icon | string | undefined) => {
+  if (!val) return;
+  if (typeof val === "object") {
+    state.icon = val.icon || defaultIcon;
+    state.issuer = val.label || "";
+  } else if (typeof val === "string") {
+    state.issuer = val;
+  }
 };
 
 async function addAccount(event: FormSubmitEvent<Account>) {
@@ -100,7 +105,17 @@ async function onError(event: FormErrorEvent) {
 }
 
 watch(searchIssuerDebounced, async (query) => {
-  icons.value = await getIcons(query);
+  if (!query?.trim()) {
+    icons.value = [];
+    searchingIcons.value = false;
+    return;
+  }
+  searchingIcons.value = true;
+  try {
+    icons.value = await getIcons(query);
+  } finally {
+    searchingIcons.value = false;
+  }
 });
 </script>
 
@@ -121,13 +136,27 @@ watch(searchIssuerDebounced, async (query) => {
             ignore-filter
             :items="icons || []"
             :icon="state.icon"
-            placeholder="Google, GitHub, etc."
+            :loading="searchingIcons"
+            placeholder="Search issuer (e.g. Google, GitHub)"
             size="md"
             required
+            class="w-full"
             :ui="{ base: 'h-10' }"
             @update:model-value="updateIssuerAndIcon"
           >
-            <template #empty>Type something to search</template>
+            <template #item-leading="{ item }">
+              <UIcon :name="item.icon" class="size-4 shrink-0" />
+            </template>
+            <template #item-trailing="{ item }">
+              <span v-if="item.description" class="text-[10px] uppercase font-mono text-neutral-400 dark:text-neutral-500">
+                {{ item.description }}
+              </span>
+            </template>
+            <template #empty>
+              <span v-if="searchingIcons">Searching icons...</span>
+              <span v-else-if="searchIssuer">No icons found for "{{ searchIssuer }}"</span>
+              <span v-else>Type to search brand or icon</span>
+            </template>
           </UInputMenu>
         </UFormField>
 
@@ -137,7 +166,7 @@ watch(searchIssuerDebounced, async (query) => {
             placeholder="name@example.com"
             size="md"
             required
-            icon="i-heroicons-envelope"
+            icon="i-lucide-mail"
             :ui="{ base: 'h-10' }"
           />
         </UFormField>
@@ -152,7 +181,7 @@ watch(searchIssuerDebounced, async (query) => {
             placeholder="JBSWY3DPEHPK3PXP"
             size="md"
             required
-            icon="i-heroicons-key"
+            icon="i-lucide-key-round"
             class="font-mono"
             :ui="{ base: 'h-10' }"
           />
@@ -169,7 +198,7 @@ watch(searchIssuerDebounced, async (query) => {
           >
         </div>
 
-        <div v-show="showAdvanced" class="p-3 rounded-lg bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-3">
+        <div v-show="showAdvanced" class="p-3.5 rounded-xl bg-neutral-100/60 dark:bg-neutral-800/40 border border-neutral-200/80 dark:border-neutral-700/60 space-y-3">
           <UFormField label="Algorithm" name="algorithm" required>
             <USelect v-model="state.algorithm" :items="algorithms" size="sm" class="w-full" />
           </UFormField>

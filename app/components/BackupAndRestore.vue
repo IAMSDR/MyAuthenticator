@@ -298,7 +298,7 @@ const restoreFromUriListFile = async () => {
             @click="handleChosen(1)"
           >
             <div class="flex items-center gap-3">
-              <UIcon name="i-hugeicons-encrypt" class="size-5 text-primary-600 dark:text-primary-400" />
+              <UIcon name="i-lucide-shield-check" class="size-5 text-primary-600 dark:text-primary-400" />
               <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Export Encrypted Backup</span>
             </div>
             <UIcon
@@ -340,7 +340,7 @@ const restoreFromUriListFile = async () => {
             @click="handleChosen(2)"
           >
             <div class="flex items-center gap-3">
-              <UIcon name="i-prime-list" class="size-5 text-primary-600 dark:text-primary-400" />
+              <UIcon name="i-lucide-file-text" class="size-5 text-primary-600 dark:text-primary-400" />
               <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Export Plain URI List</span>
             </div>
             <UIcon
@@ -374,7 +374,7 @@ const restoreFromUriListFile = async () => {
             @click="handleChosen(3)"
           >
             <div class="flex items-center gap-3">
-              <UIcon name="i-hugeicons-encrypt" class="size-5 text-neutral-600 dark:text-neutral-400" />
+              <UIcon name="i-lucide-shield-check" class="size-5 text-neutral-600 dark:text-neutral-400" />
               <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Restore Encrypted Backup</span>
             </div>
             <UIcon
@@ -423,7 +423,7 @@ const restoreFromUriListFile = async () => {
             @click="handleChosen(4)"
           >
             <div class="flex items-center gap-3">
-              <UIcon name="i-tabler-restore" class="size-5 text-neutral-600 dark:text-neutral-400" />
+              <UIcon name="i-lucide-file-up" class="size-5 text-neutral-600 dark:text-neutral-400" />
               <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Restore from URI Text File</span>
             </div>
             <UIcon

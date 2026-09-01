@@ -63,7 +63,7 @@ const onSubmit = async () => {
             v-model="oldPassword"
             :type="show ? 'text' : 'password'"
             placeholder="Current master password"
-            icon="i-heroicons-lock-closed"
+            icon="i-lucide-lock"
             size="md"
             :ui="{ base: 'h-10' }"
           />
@@ -74,7 +74,7 @@ const onSubmit = async () => {
             v-model="newPassword"
             :type="show ? 'text' : 'password'"
             placeholder="New master password (min 8 chars)"
-            icon="i-heroicons-key"
+            icon="i-lucide-key-round"
             size="md"
             required
             :ui="{ base: 'h-10' }"
@@ -86,7 +86,7 @@ const onSubmit = async () => {
             v-model="confirm"
             :type="show ? 'text' : 'password'"
             placeholder="Confirm new master password"
-            icon="i-heroicons-key"
+            icon="i-lucide-key-round"
             size="md"
             required
             :ui="{ base: 'h-10' }"

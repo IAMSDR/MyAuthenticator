@@ -117,7 +117,7 @@ const onError = (error: Error) => {
   <AdaptiveModal title="Scan QR Code" description="Point your camera or upload a QR image">
     <template #body>
       <div class="space-y-4">
-        <div class="relative overflow-hidden rounded-lg bg-neutral-950 aspect-square flex items-center justify-center border border-neutral-800">
+        <div class="relative overflow-hidden rounded-xl bg-neutral-950 aspect-square max-h-[260px] sm:max-h-[280px] w-full max-w-[280px] mx-auto flex items-center justify-center border border-neutral-800 shadow-inner">
           <QrcodeStream
             v-if="!state.error"
             class="absolute inset-0 w-full h-full object-cover"
@@ -130,7 +130,7 @@ const onError = (error: Error) => {
               <span class="text-xs text-neutral-400">Starting camera...</span>
             </div>
             <div v-else class="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div class="size-48 rounded-lg border-2 border-primary-500/70 shadow-[0_0_15px_rgba(34,197,94,0.3)]" />
+              <div class="size-40 rounded-lg border-2 border-primary-500/70 shadow-[0_0_15px_rgba(34,197,94,0.3)]" />
             </div>
           </QrcodeStream>
           <div v-else class="text-center p-6 space-y-2">
@@ -143,7 +143,7 @@ const onError = (error: Error) => {
         <USeparator label="or" color="neutral" size="sm" />
 
         <div class="flex justify-center">
-          <UButton color="neutral" variant="soft" size="sm" icon="i-heroicons-photo-16-solid" class="cursor-pointer">
+          <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-image" class="cursor-pointer">
             <label for="fileinput" class="cursor-pointer">Upload image file</label>
             <QrcodeCapture id="fileinput" class="hidden" @detect="onDetect" />
           </UButton>
