@@ -1,10 +1,10 @@
 export default defineWebAuthnAuthenticateEventHandler({
   async storeChallenge(event, challenge, attemptId) {
-    const redis = getRedis();
+    const redis = await getRedis();
     await redis.set(challengeKey(attemptId), challenge, { ex: 60 });
   },
   async getChallenge(event, attemptId) {
-    const redis = getRedis();
+    const redis = await getRedis();
     const challenge = await redis.get(challengeKey(attemptId));
     if (!challenge) {
       throw createError({
@@ -16,7 +16,7 @@ export default defineWebAuthnAuthenticateEventHandler({
     return challenge as string;
   },
   async getCredential(event, credentialID) {
-    const redis = getRedis();
+    const redis = await getRedis();
     const raw = await redis.get(redisKeys.passkeys);
     const passkeys: Array<{ id: string; publicKey: string; counter: number; backedUp: boolean; transports: unknown; displayName: string; user: string; createdAt: string }> = raw ? (JSON.parse(raw) as typeof passkeys) : [];
     const credential = passkeys.find((p) => p.id === credentialID);

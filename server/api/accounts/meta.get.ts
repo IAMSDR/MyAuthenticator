@@ -1,6 +1,6 @@
 export default eventHandler(async () => {
   const meta = await getAccountsMeta();
-  const redis = getRedis();
+  const redis = await getRedis();
   const rawOrder = await redis.get(redisKeys.accountsOrder);
   let order: string[] = [];
   if (rawOrder) {

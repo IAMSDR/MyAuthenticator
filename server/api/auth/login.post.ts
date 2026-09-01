@@ -4,7 +4,7 @@ export default eventHandler(async (event) => {
   const { data, error } = await readValidatedBody(event, (body) => loginSchema.safeParse(body));
   if (error) throw createError({ statusCode: 400, statusMessage: "Validation Failed", message: error.message });
 
-  const redis = getRedis();
+  const redis = await getRedis();
   const setupComplete = await redis.get(redisKeys.setupComplete);
   if (setupComplete !== "true") throw createError({ statusCode: 400, message: "Setup not complete" });
 

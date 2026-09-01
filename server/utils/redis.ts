@@ -1,5 +1,16 @@
 import { Redis as UpstashRedis } from "@upstash/redis";
-import IORedis from "ioredis";
+// NOTE: `ioredis` is Node-TCP only and pulls `node:string_decoder` / `node:net`
+// which have no Cloudflare Workers polyfill (unenv throws
+// "string_decoder.StringDecoder is not implemented yet").
+// Keep it out of the Cloudflare bundle via lazy dynamic import.
+let _IORedisCtor: typeof import("ioredis").default | null = null;
+async function getIORedisCtor(): Promise<typeof import("ioredis").default> {
+  if (_IORedisCtor) return _IORedisCtor;
+  // `/* @vite-ignore */` prevents Vite/Rollup from pre-bundling this for CF preset
+  const mod = await import(/* @vite-ignore */ "ioredis");
+  _IORedisCtor = (mod as unknown as { default: typeof import("ioredis").default }).default ?? (mod as unknown as typeof import("ioredis").default);
+  return _IORedisCtor;
+}
 
 type RedisClient = {
   get: (key: string) => Promise<string | null>;
@@ -76,7 +87,8 @@ function createUpstashClient(url: string, token: string): RedisClient {
   };
 }
 
-function createIORedisClient(redisUrl: string): RedisClient {
+async function createIORedisClient(redisUrl: string): Promise<RedisClient> {
+  const IORedis = await getIORedisCtor();
   const client = new IORedis(redisUrl, { maxRetriesPerRequest: 3, lazyConnect: false });
   _isUpstash = false;
   return {
@@ -124,7 +136,7 @@ function createIORedisClient(redisUrl: string): RedisClient {
 
 // Shared helper: run an atomic transaction and return per-command results.
 export async function runTransaction(commands: [string, ...unknown[]][]): Promise<unknown[]> {
-  const redis = getRedis();
+  const redis = await getRedis();
   if (redis.multiExec) return await redis.multiExec(commands);
   // Fallback (no pipeline support): run sequentially.
   const results: unknown[] = [];
@@ -151,7 +163,7 @@ export function versionFromTransaction(results: unknown[], commands: [string, ..
   return 0;
 }
 
-export function getRedis(): RedisClient {
+export async function getRedis(): Promise<RedisClient> {
   if (_redis) return _redis;
   const config = useRuntimeConfig();
   const upstashUrl = (config.upstashRedisRestUrl as string) || process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || "";
@@ -163,7 +175,12 @@ export function getRedis(): RedisClient {
     return _redis;
   }
   if (redisUrl) {
-    _redis = createIORedisClient(redisUrl);
+    // IORedis is Node-only — on Cloudflare Workers this will throw with a clear
+    // message instead of the cryptic `string_decoder` unenv error.
+    if (typeof process !== "undefined" && (process as unknown as { env?: Record<string,string> }).env?.CF_PAGES) {
+      throw createError({ statusCode: 500, message: "REDIS_URL (ioredis) is not supported on Cloudflare Workers. Use UPSTASH_REDIS_REST_URL + TOKEN." });
+    }
+    _redis = await createIORedisClient(redisUrl);
     return _redis;
   }
   // Fallback: try env upstash even if config empty (nitro runtime)
@@ -201,7 +218,7 @@ export function challengeKey(attemptId: string) {
 }
 
 export async function getAccountsMeta() {
-  const redis = getRedis();
+  const redis = await getRedis();
   const meta = await redis.hgetall(redisKeys.accountsMeta);
   if (!meta || Object.keys(meta).length === 0) {
     // If accounts:meta is not set, derive count from accounts hash directly

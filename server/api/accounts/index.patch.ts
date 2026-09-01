@@ -6,7 +6,7 @@ export default eventHandler(async (event) => {
 
   const body = await readBody(event);
   // Allow partial cipherAccount or edit fields
-  const redis = getRedis();
+  const redis = await getRedis();
   const existingJson = await redis.hget(redisKeys.accounts, id);
   if (!existingJson) throw createError({ statusCode: 404, message: "Account not found" });
 

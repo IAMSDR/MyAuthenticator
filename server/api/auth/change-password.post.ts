@@ -5,7 +5,7 @@ export default eventHandler(async (event) => {
   const { data, error } = await readValidatedBody(event, (body) => changePasswordSchema.safeParse(body));
   if (error) throw createError({ statusCode: 400, statusMessage: "Validation Failed", message: error.message });
 
-  const redis = getRedis();
+  const redis = await getRedis();
   // Verify old password if provided (recommended); if not provided, require session is still checked
   if (data.oldPassword) {
     const existingHash = await redis.get(redisKeys.passwordHash);

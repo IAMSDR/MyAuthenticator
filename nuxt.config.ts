@@ -78,4 +78,19 @@ export default defineNuxtConfig({
     },
   },
   compatibilityDate: "2025-07-15",
+  nitro: {
+    // Default to node-server locally. For Cloudflare Workers/Pages deployment
+    // set NITRO_PRESET=cloudflare_module (or cloudflare_pages). `ioredis` is
+    // Node-TCP only and pulls `node:string_decoder` / `node:net` which unenv
+    // cannot polyfill ("StringDecoder is not implemented yet"). We alias it to
+    // a local empty mock for cloudflare builds and lazy-load it in
+    // server/utils/redis.ts.
+    preset: process.env.NITRO_PRESET || undefined,
+    alias:
+      process.env.NITRO_PRESET?.includes("cloudflare")
+        ? {
+            ioredis: "./server/mocks/ioredis-empty.ts",
+          }
+        : {},
+  },
 });
