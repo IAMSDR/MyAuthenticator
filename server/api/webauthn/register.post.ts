@@ -15,6 +15,25 @@ export default defineWebAuthnRegisterEventHandler({
     await redis.del(challengeKey(attemptId));
     return challenge as string;
   },
+  // @ts-expect-error simplewebauthn v13 PRF client extension typing
+  async getOptions(event) {
+    const redis = await getRedis();
+    const prfSalt = await redis.get(redisKeys.prfSalt);
+    if (prfSalt) {
+      const b64 = prfSalt.replace(/-/g, "+").replace(/_/g, "/");
+      const prfBytes = Uint8Array.from(Buffer.from(b64, "base64")).buffer;
+      return {
+        extensions: {
+          prf: {
+            eval: {
+              first: prfBytes,
+            },
+          },
+        },
+      };
+    }
+    return {};
+  },
   validateUser: (user) => passkeyUser.parseAsync(user),
   async onSuccess(event, { user, credential }) {
     const redis = await getRedis();

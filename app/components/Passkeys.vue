@@ -3,10 +3,9 @@ import AdaptiveModal from "./AdaptiveModal.vue";
 import { h } from "vue";
 import type { TableColumn } from "@nuxt/ui";
 import { toast } from "@steveyuowo/vue-hot-toast";
+import { startRegistration } from "@simplewebauthn/browser";
 
 const UButton = resolveComponent("UButton");
-
-const { register } = useWebAuthn();
 
 const { data: passkeys, status } = await useLazyFetch(
   "/api/webauthn/passkeys",
@@ -52,19 +51,44 @@ const addPasskey = async () => {
   loading.value = true;
   let createdCredId: string | null = null;
   try {
-    const cred = (await register({
+    const user = {
       userName: `${passKeyName.value} - MyAuthenticator`,
       displayName: passKeyName.value,
-    })) as any;
+    };
 
-    createdCredId = cred?.id ?? cred?.credentialId ?? "";
-    if (!createdCredId) {
-      const list = await $fetch<Array<{ id: string }>>("/api/webauthn/passkeys");
-      createdCredId = list[list.length - 1]?.id ?? "";
+    // 1. Get creation options from server (includes PRF extension)
+    const { creationOptions, attemptId } = await $fetch<{ creationOptions: any; attemptId: string }>("/api/webauthn/register", {
+      method: "POST",
+      body: {
+        user,
+        verify: false,
+      },
+    });
+
+    // 2. Perform WebAuthn ceremony directly with @simplewebauthn/browser to receive full clientExtensionResults
+    const attestationResponse = await startRegistration({
+      optionsJSON: creationOptions,
+    });
+
+    createdCredId = attestationResponse.id;
+
+    // 3. Verify on server and save credential in Redis Hash
+    const verificationResponse = await $fetch<{ verified: boolean }>("/api/webauthn/register", {
+      method: "POST",
+      body: {
+        user,
+        attemptId,
+        response: attestationResponse,
+        verify: true,
+      },
+    });
+
+    if (!verificationResponse?.verified) {
+      throw new Error("Registration verification failed");
     }
 
     const { dek } = useEncryption();
-    const prfResult = cred?.clientExtensionResults?.prf?.results?.first;
+    const prfResult = attestationResponse.clientExtensionResults?.prf?.results?.first;
 
     if (prfResult && dek.value && createdCredId) {
       // Authenticator supports PRF: generate and store DEK wrapper
@@ -85,7 +109,7 @@ const addPasskey = async () => {
     passKeyName.value = "";
     await refreshNuxtData("passkeys");
   } catch (err: any) {
-    // If registration succeeded but wrapping failed with an exception, cleanup orphaned passkey
+    // If registration succeeded on server but wrapping failed, cleanup credential
     if (createdCredId) {
       try {
         await $fetch("/api/webauthn/passkeys", {

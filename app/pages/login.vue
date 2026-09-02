@@ -2,11 +2,11 @@
 import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import { set } from "idb-keyval";
+import { startAuthentication } from "@simplewebauthn/browser";
 import { onlineNow } from "~/utils/offline";
 import BackgroundGlow from "~/components/BackgroundGlow.vue";
 
 const { fetch: refreshSession } = useUserSession();
-const { authenticate } = useWebAuthn();
 const { setDEK, unlockWithPassword } = useEncryption();
 const { setOfflineState } = useOffline();
 
@@ -25,25 +25,44 @@ const loginWithPasskey = async () => {
   loading.value = true;
   const id = toast.loading("Authenticating...");
   try {
-    const result = (await authenticate()) as any;
-    const prfResult = result?.clientExtensionResults?.prf?.results?.first;
+    // 1. Get request options from server (includes PRF eval extension)
+    const { requestOptions, attemptId } = await $fetch<{ requestOptions: any; attemptId: string }>("/api/webauthn/authenticate", {
+      method: "POST",
+      body: {
+        verify: false,
+      },
+    });
 
-    await refreshSession();
-    let credentialId = result?.id ?? result?.credentialId;
-    if (!credentialId) {
-      try {
-        const list = await $fetch<Array<{ id: string }>>("/api/webauthn/passkeys");
-        credentialId = list[0]?.id;
-      } catch {}
+    // 2. Perform WebAuthn authentication via @simplewebauthn/browser
+    const assertionResponse = await startAuthentication({
+      optionsJSON: requestOptions,
+    });
+
+    const credentialId = assertionResponse.id;
+    const prfResult = assertionResponse.clientExtensionResults?.prf?.results?.first;
+
+    // 3. Verify assertion on server
+    const verificationResponse = await $fetch<{ verified: boolean }>("/api/webauthn/authenticate", {
+      method: "POST",
+      body: {
+        attemptId,
+        response: assertionResponse,
+        verify: true,
+      },
+    });
+
+    if (!verificationResponse?.verified) {
+      throw new Error("Authentication verification failed");
     }
-    if (!credentialId) throw new Error("Passkey credential not found");
 
-    // Fetch DEK wrapper for this passkey
+    // 4. Fetch DEK wrapper for this passkey
     let wrappedData: { wrappedDEK: string };
     try {
       wrappedData = await $fetch(`/api/webauthn/wrap?credentialId=${encodeURIComponent(credentialId)}`);
     } catch (e: any) {
       // Passkey exists for authentication, but has no DEK wrapper (registered without PRF)
+      // Logout session so user is not stuck in half-authenticated state without DEK
+      await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
       toast.update(id, {
         message: "Passkey authenticated, but cannot unlock vault. Enter master password to unlock.",
         type: "error",
@@ -52,6 +71,7 @@ const loginWithPasskey = async () => {
     }
 
     if (!prfResult) {
+      await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
       toast.update(id, {
         message: "Authenticator did not return PRF secret. Enter master password to unlock vault.",
         type: "error",
@@ -65,6 +85,7 @@ const loginWithPasskey = async () => {
     const dek = await importKeyFromBase64(b64DEK);
     setDEK(dek);
     await set(`wrappedDEK:prf:${credentialId}`, wrappedData.wrappedDEK);
+    await refreshSession();
     toast.update(id, { message: "Passkey login successful", type: "success" });
     await navigateTo("/");
   } catch (e: any) {

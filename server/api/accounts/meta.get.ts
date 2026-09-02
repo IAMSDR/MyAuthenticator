@@ -11,16 +11,5 @@ export default eventHandler(async () => {
       order = [];
     }
   }
-  if (!meta) {
-    let actualCount = 0;
-    try {
-      if (redis.hlen) actualCount = await redis.hlen(redisKeys.accounts);
-      else {
-        const all = await redis.hgetall(redisKeys.accounts);
-        actualCount = all ? Object.keys(all).length : 0;
-      }
-    } catch {}
-    return { version: 0, updatedAt: new Date(0).toISOString(), count: actualCount, order };
-  }
   return { ...meta, order };
 });
