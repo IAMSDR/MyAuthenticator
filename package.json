@@ -23,7 +23,7 @@
     "@vueuse/nuxt": "13.0.0",
     "drizzle-orm": "^0.40.0",
     "long": "^5.3.1",
-    "nuxt": "^3.16.0",
+    "nuxt": "^3.21.10",
     "nuxt-auth-utils": "0.5.16",
     "otpauth": "^9.3.6",
     "protobufjs": "^7.4.0",
