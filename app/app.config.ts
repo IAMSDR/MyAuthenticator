@@ -38,7 +38,7 @@ export default defineAppConfig({
     },
     select: {
       slots: {
-        root: "w-full",
+        base: "w-full",
       },
     },
     formField: {

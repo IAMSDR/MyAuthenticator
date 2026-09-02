@@ -263,7 +263,8 @@ export function useTheme() {
       _iconSet.value !== "lucide" ||
       _blackAsPrimary.value ||
       hasCustomColors.value ||
-      hasCSSVariables.value
+      hasCSSVariables.value ||
+      Object.keys(aiThemeExtras.value).length > 0
     );
   });
 
@@ -284,6 +285,15 @@ export function useTheme() {
     window.localStorage.removeItem("nuxt-ui-icons");
     if (appConfig.ui.icons) {
       Object.assign(appConfig.ui.icons, themeIcons.lucide);
+    }
+
+    // Clean up auxiliary colors added by AI theme
+    const colorKeys = ["secondary", "success", "info", "warning", "error"] as const;
+    for (const c of colorKeys) {
+      if ((appConfig.ui.colors as Record<string, unknown>)[c]) {
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        delete (appConfig.ui.colors as Record<string, unknown>)[c];
+      }
     }
 
     setBlackAsPrimary(false);

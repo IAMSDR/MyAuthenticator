@@ -1,3 +1,4 @@
+// @ts-expect-error bcryptjs lacks type declarations in current dependencies
 import bcrypt from "bcryptjs";
 
 const SALT_ROUNDS = 12;

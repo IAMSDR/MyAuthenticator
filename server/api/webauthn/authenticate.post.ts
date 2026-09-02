@@ -15,20 +15,20 @@ export default defineWebAuthnAuthenticateEventHandler({
     await redis.del(challengeKey(attemptId));
     return challenge as string;
   },
+  // @ts-expect-error simplewebauthn AuthenticatorTransport typing
   async getCredential(event, credentialID) {
     const redis = await getRedis();
-    const raw = await redis.get(redisKeys.passkeys);
-    const passkeys: Array<{ id: string; publicKey: string; counter: number; backedUp: boolean; transports: unknown; displayName: string; user: string; createdAt: string }> = raw ? (JSON.parse(raw) as typeof passkeys) : [];
-    const credential = passkeys.find((p) => p.id === credentialID);
-    if (!credential) {
+    const raw = await redis.hget(redisKeys.passkeys, credentialID);
+    if (!raw) {
       throw createError({
         statusCode: 404,
         statusMessage: "Credential not found",
       });
     }
+    const credential = JSON.parse(raw) as { id: string; publicKey: string; counter: number; backedUp: boolean; transports: unknown; displayName: string; user: string; createdAt: string };
     return credential as unknown as { id: string; publicKey: string; counter: number; backedUp: boolean; transports: unknown };
   },
-  async onSuccess(event, { credential }) {
+  async onSuccess(event) {
     await setUserSession(event, { user: "ADMIN" });
     // Note: wrappedDEK fetch is done via GET /api/webauthn/wrap?credentialId=...
     // If no wrapper exists, client will show "Passkey has no decrypt wrapper, use password login"

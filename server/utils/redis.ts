@@ -14,10 +14,11 @@ async function getIORedisCtor(): Promise<typeof import("ioredis").default> {
 
 type RedisClient = {
   get: (key: string) => Promise<string | null>;
-  set: (key: string, value: string, opts?: { ex?: number }) => Promise<string | null | unknown>;
+  set: (key: string, value: string, opts?: { ex?: number; nx?: boolean }) => Promise<string | null | unknown>;
   del: (...keys: string[]) => Promise<number>;
   hgetall: (key: string) => Promise<Record<string, string> | null>;
   hget: (key: string, field: string) => Promise<string | null>;
+  hexists?: (key: string, field: string) => Promise<number>;
   hlen?: (key: string) => Promise<number>;
   hset: (key: string, fields: Record<string, string> | string, value?: string) => Promise<number | unknown>;
   hdel: (key: string, ...fields: string[]) => Promise<number>;
@@ -37,12 +38,18 @@ function createUpstashClient(url: string, token: string): RedisClient {
   return {
     get: (key) => client.get(key) as Promise<string | null>,
     set: (key, value, opts) => {
-      if (opts?.ex) return client.set(key, value, { ex: opts.ex }) as Promise<string | null>;
+      const upstashOpts: Record<string, unknown> = {};
+      if (opts?.ex) upstashOpts.ex = opts.ex;
+      if (opts?.nx) upstashOpts.nx = opts.nx;
+      if (Object.keys(upstashOpts).length) {
+        return client.set(key, value, upstashOpts as never) as Promise<string | null>;
+      }
       return client.set(key, value) as Promise<string | null>;
     },
     del: (...keys) => client.del(...keys) as Promise<number>,
     hgetall: (key) => client.hgetall(key) as Promise<Record<string, string> | null>,
     hget: (key, field) => client.hget(key, field) as Promise<string | null>,
+    hexists: (key, field) => client.hexists(key, field) as Promise<number>,
     hlen: (key) => client.hlen(key) as Promise<number>,
     hset: (key: string, fields: Record<string, string> | string, value?: string) => {
       if (typeof fields === "string" && value !== undefined) {
@@ -57,8 +64,7 @@ function createUpstashClient(url: string, token: string): RedisClient {
       const args: unknown[] = [cursor];
       if (opts?.match) args.push("MATCH", opts.match);
       if (opts?.count) args.push("COUNT", opts.count);
-      // @ts-expect-error upstash scan signature
-      const res = await client.scan(cursor, opts as never);
+      const res = await (client as unknown as { scan: (...a: unknown[]) => Promise<unknown> }).scan(cursor, opts);
       // Upstash returns [cursor, keys]
       return res as [string, string[]];
     },
@@ -74,11 +80,10 @@ function createUpstashClient(url: string, token: string): RedisClient {
         }
         return args;
       };
-      // @ts-expect-error pipeline
       const pipe = client.multi();
       for (const [cmd, ...args] of commands) {
         const nArgs = normalize(cmd, args);
-        // @ts-expect-error dynamic
+        // @ts-expect-error dynamic command execution on client.multi()
         pipe[cmd.toLowerCase()](...nArgs);
       }
       const res = (await pipe.exec()) as unknown[];
@@ -94,8 +99,11 @@ async function createIORedisClient(redisUrl: string): Promise<RedisClient> {
   return {
     get: (key) => client.get(key),
     set: (key, value, opts) => {
-      if (opts?.ex) return client.set(key, value, "EX", opts.ex);
-      return client.set(key, value);
+      const args: unknown[] = [key, value];
+      if (opts?.ex) args.push("EX", opts.ex);
+      if (opts?.nx) args.push("NX");
+      // @ts-expect-error dynamic ioredis arguments
+      return client.set(...args);
     },
     del: (...keys) => client.del(...keys),
     hgetall: async (key) => {
@@ -103,6 +111,7 @@ async function createIORedisClient(redisUrl: string): Promise<RedisClient> {
       return Object.keys(res).length === 0 ? null : res;
     },
     hget: (key, field) => client.hget(key, field),
+    hexists: (key, field) => client.hexists(key, field),
     hlen: (key) => client.hlen(key),
     hset: (key, fields, value) => {
       if (typeof fields === "string" && value !== undefined) {
@@ -120,7 +129,7 @@ async function createIORedisClient(redisUrl: string): Promise<RedisClient> {
     multiExec: async (commands) => {
       const multi = client.multi();
       for (const [cmd, ...args] of commands) {
-        // @ts-expect-error dynamic
+        // @ts-expect-error dynamic command execution on client.multi()
         multi[cmd.toLowerCase()](...args);
       }
       const res = await multi.exec();
@@ -142,7 +151,7 @@ export async function runTransaction(commands: [string, ...unknown[]][]): Promis
   const results: unknown[] = [];
   for (const [cmd, ...args] of commands) {
     const lc = cmd.toLowerCase();
-    // @ts-expect-error dynamic
+    // @ts-expect-error dynamic method call on redis client fallback
     results.push(await (redis as unknown as Record<string, (...a: unknown[]) => Promise<unknown>>)[lc](...args));
   }
   return results;
@@ -153,6 +162,7 @@ export async function runTransaction(commands: [string, ...unknown[]][]): Promis
 export function versionFromTransaction(results: unknown[], commands: [string, ...unknown[]][], key: string, field: string): number {
   for (let i = 0; i < commands.length; i++) {
     const c = commands[i];
+    if (!c) continue;
     const cmd = String(c[0]).toLowerCase();
     if (cmd === "hincrby" && c[1] === key && c[2] === field) {
       const v = results[i];

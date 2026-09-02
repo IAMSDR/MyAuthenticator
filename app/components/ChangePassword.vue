@@ -11,6 +11,10 @@ const show = ref(false);
 const emit = defineEmits(["close"]);
 
 const onSubmit = async () => {
+  if (!oldPassword.value) {
+    toast.error("Enter current password");
+    return;
+  }
   if (newPassword.value !== confirm.value) {
     toast.error("Passwords do not match");
     return;
@@ -36,7 +40,7 @@ const onSubmit = async () => {
       body: {
         newWrappedDEK: wrapped,
         password: newPassword.value,
-        oldPassword: oldPassword.value || undefined,
+        oldPassword: oldPassword.value,
       },
     });
     const { set } = await import("idb-keyval");
@@ -58,13 +62,14 @@ const onSubmit = async () => {
   >
     <template #body>
       <form class="space-y-4" @submit.prevent="onSubmit">
-        <UFormField label="Current password">
+        <UFormField label="Current password" required>
           <UInput
             v-model="oldPassword"
             :type="show ? 'text' : 'password'"
             placeholder="Current master password"
             icon="i-lucide-lock"
             size="md"
+            required
             :ui="{ base: 'h-10' }"
           />
         </UFormField>

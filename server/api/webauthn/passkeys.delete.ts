@@ -3,11 +3,9 @@ export default eventHandler(async (event) => {
   const query = getQuery(event);
   if (!query.id) throw createError({ statusCode: 400, message: "Validation Failed" });
   const redis = await getRedis();
-  const raw = await redis.get(redisKeys.passkeys);
-  const passkeys: Array<{ id: string; displayName: string; createdAt: string; [k: string]: unknown }> = raw ? (JSON.parse(raw) as typeof passkeys) : [];
-  const filtered = passkeys.filter((p) => p.id !== String(query.id));
-  await redis.set(redisKeys.passkeys, JSON.stringify(filtered));
+  const id = String(query.id);
+  await redis.hdel(redisKeys.passkeys, id);
   // also delete PRF wrapper if exists
-  await redis.del(dekPrfKey(String(query.id)));
+  await redis.del(dekPrfKey(id));
   return { status: 200, message: "Deleted successfully" };
 });

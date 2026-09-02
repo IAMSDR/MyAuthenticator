@@ -77,7 +77,7 @@ export const changePasswordSchema = z.object({
       /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/,
       "Password must contain 1 uppercase, 1 lowercase, 1 digit and 1 special character"
     ),
-  oldPassword: z.string().min(8).optional(),
+  oldPassword: z.string().min(8, "Current password is required"),
 });
 
 export const accountsMetaSchema = z.object({

@@ -7,7 +7,7 @@ import BackgroundGlow from "~/components/BackgroundGlow.vue";
 
 const { fetch: refreshSession } = useUserSession();
 const { authenticate } = useWebAuthn();
-const { setDEK, unlockWithPassword, unlockWithPrf } = useEncryption();
+const { setDEK, unlockWithPassword } = useEncryption();
 const { setOfflineState } = useOffline();
 
 const state = reactive({
@@ -18,23 +18,16 @@ const loading = ref(false);
 const show = ref(false);
 
 const loginWithPasskey = async () => {
+  if (!onlineNow()) {
+    toast.error("Passkey login requires an internet connection. Use master password offline.");
+    return;
+  }
   loading.value = true;
   const id = toast.loading("Authenticating...");
   try {
     const result = (await authenticate()) as any;
     const prfResult = result?.clientExtensionResults?.prf?.results?.first;
-    if (!onlineNow() && prfResult) {
-      const cid = result?.id ?? result?.credentialId;
-      const ok = await unlockWithPrf(new Uint8Array(prfResult), cid);
-      if (ok) {
-        setOfflineState(true);
-        toast.update(id, { message: "Offline mode", type: "success" });
-        await navigateTo("/");
-        return;
-      }
-      toast.update(id, { message: "Offline unlock unavailable. Use password.", type: "error" });
-      return;
-    }
+
     await refreshSession();
     let credentialId = result?.id ?? result?.credentialId;
     if (!credentialId) {
@@ -44,22 +37,29 @@ const loginWithPasskey = async () => {
       } catch {}
     }
     if (!credentialId) throw new Error("Passkey credential not found");
+
+    // Fetch DEK wrapper for this passkey
     let wrappedData: { wrappedDEK: string };
     try {
       wrappedData = await $fetch(`/api/webauthn/wrap?credentialId=${encodeURIComponent(credentialId)}`);
     } catch (e: any) {
-      toast.update(id, { message: e?.data?.message ?? String(e), type: "error" });
+      // Passkey exists for authentication, but has no DEK wrapper (registered without PRF)
+      toast.update(id, {
+        message: "Passkey authenticated, but cannot unlock vault. Enter master password to unlock.",
+        type: "error",
+      });
       return;
     }
-    let prfBytes: Uint8Array | null = prfResult ? new Uint8Array(prfResult) : null;
-    if (!prfBytes) {
-      try {
-        const { prfSalt } = await $fetch<{ prfSalt: string }>("/api/auth/prf-salt");
-        const b64 = prfSalt.replace(/-/g, "+").replace(/_/g, "/");
-        prfBytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).slice(0, 32);
-      } catch {}
+
+    if (!prfResult) {
+      toast.update(id, {
+        message: "Authenticator did not return PRF secret. Enter master password to unlock vault.",
+        type: "error",
+      });
+      return;
     }
-    if (!prfBytes) throw new Error("PRF not available");
+
+    const prfBytes = new Uint8Array(prfResult);
     const prfKey = await importKeyFromBytes(prfBytes);
     const b64DEK = await decryptWithKey(wrappedData.wrappedDEK, prfKey);
     const dek = await importKeyFromBase64(b64DEK);

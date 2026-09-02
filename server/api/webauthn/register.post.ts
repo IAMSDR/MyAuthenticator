@@ -18,17 +18,18 @@ export default defineWebAuthnRegisterEventHandler({
   validateUser: (user) => passkeyUser.parseAsync(user),
   async onSuccess(event, { user, credential }) {
     const redis = await getRedis();
-    const raw = await redis.get(redisKeys.passkeys);
-    const passkeys: Array<{ id: string; displayName: string; user: string; publicKey: string; counter: number; backedUp: boolean; transports: unknown; createdAt: string }> = raw ? (JSON.parse(raw) as typeof passkeys) : [];
-
-    const exists = passkeys.find((p) => p.displayName === user.displayName || p.id === credential.id);
+    // Check if device already registered by id in Hash
+    const exists = redis.hexists
+      ? (await redis.hexists(redisKeys.passkeys, credential.id)) === 1
+      : (await redis.hget(redisKeys.passkeys, credential.id)) !== null;
     if (exists) {
       throw createError({
         statusCode: 409,
         message: "Device already registered",
       });
     }
-    passkeys.push({
+
+    const passkeyData = {
       displayName: user.displayName,
       user: user.userName,
       id: credential.id,
@@ -37,7 +38,9 @@ export default defineWebAuthnRegisterEventHandler({
       backedUp: credential.backedUp,
       transports: credential.transports,
       createdAt: new Date().toISOString(),
-    });
-    await redis.set(redisKeys.passkeys, JSON.stringify(passkeys));
+    };
+
+    // Store in Redis Hash atomically by credential ID
+    await redis.hset(redisKeys.passkeys, credential.id, JSON.stringify(passkeyData));
   },
 });

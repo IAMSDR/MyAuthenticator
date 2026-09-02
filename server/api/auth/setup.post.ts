@@ -5,25 +5,35 @@ export default eventHandler(async (event) => {
   if (error) throw createError({ statusCode: 400, statusMessage: "Validation Failed", message: error.message });
 
   const redis = await getRedis();
-  const existing = await redis.get(redisKeys.setupComplete);
-  if (existing === "true") throw createError({ statusCode: 409, message: "Already setup" });
+  // Atomically claim setup with NX lock (ex: 60s) to prevent concurrent setup races
+  const claimed = await redis.set(redisKeys.setupComplete, "claimed", { nx: true, ex: 60 });
+  if (!claimed) throw createError({ statusCode: 409, message: "Already setup or setup in progress" });
 
-  const hash = await bcryptHash(data.password);
+  try {
+    const hash = await bcryptHash(data.password);
 
-  // Generate prfSalt 32B base64url
-  const prfSaltBytes = new Uint8Array(32);
-  crypto.getRandomValues(prfSaltBytes);
-  const prfSalt = Buffer.from(prfSaltBytes).toString("base64url");
+    // Generate prfSalt 32B base64url
+    const prfSaltBytes = new Uint8Array(32);
+    crypto.getRandomValues(prfSaltBytes);
+    const prfSalt = Buffer.from(prfSaltBytes).toString("base64url");
 
-  // Batch all setup writes into one atomic transaction (fewer billed commands).
-  await runTransaction([
-    ["SET", redisKeys.passwordHash, hash],
-    ["SET", redisKeys.prfSalt, prfSalt],
-    ["SET", redisKeys.dekPassword, data.wrappedDEK],
-    ["SET", redisKeys.setupComplete, "true"],
-    ["HSET", redisKeys.accountsMeta, { version: "0", updatedAt: new Date().toISOString(), count: "0" }],
-    ["DEL", redisKeys.accounts],
-  ]);
+    // Batch all setup writes into one atomic transaction (fewer billed commands).
+    await runTransaction([
+      ["SET", redisKeys.passwordHash, hash],
+      ["SET", redisKeys.prfSalt, prfSalt],
+      ["SET", redisKeys.dekPassword, data.wrappedDEK],
+      ["SET", redisKeys.setupComplete, "true"],
+      ["HSET", redisKeys.accountsMeta, { version: "0", updatedAt: new Date().toISOString(), count: "0" }],
+      ["DEL", redisKeys.accounts],
+    ]);
+  } catch (err) {
+    // If setup fails, clear the temporary claim
+    const current = await redis.get(redisKeys.setupComplete);
+    if (current === "claimed") {
+      await redis.del(redisKeys.setupComplete);
+    }
+    throw err;
+  }
 
   await setUserSession(event, { user: "ADMIN" });
   return { status: 200, message: "Setup successful" };

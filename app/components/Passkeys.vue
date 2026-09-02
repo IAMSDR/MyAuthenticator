@@ -50,47 +50,50 @@ const addPasskey = async () => {
     return;
   }
   loading.value = true;
+  let createdCredId: string | null = null;
   try {
     const cred = (await register({
       userName: `${passKeyName.value} - MyAuthenticator`,
       displayName: passKeyName.value,
     })) as any;
 
-    const { dek } = useEncryption();
-    if (dek.value) {
-      try {
-        const { prfSalt } = await $fetch<{ prfSalt: string }>("/api/auth/prf-salt");
-        let prfBytes: Uint8Array | null = null;
-        const prfResult = (cred as any)?.clientExtensionResults?.prf?.results?.first;
-        if (prfResult) prfBytes = new Uint8Array(prfResult);
-        if (!prfBytes) {
-          const b64 = prfSalt.replace(/-/g, "+").replace(/_/g, "/");
-          prfBytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).slice(0, 32);
-        }
-        if (prfBytes) {
-          const prfKey = await importKeyFromBytes(prfBytes);
-          const b64DEK = await exportKeyToBase64(dek.value);
-          const wrapped = await encryptWithKey(b64DEK, prfKey);
-          let cid = (cred as any)?.id ?? (cred as any)?.credentialId ?? "";
-          if (!cid) {
-            const list = await $fetch<Array<{ id: string }>>("/api/webauthn/passkeys");
-            cid = list[list.length - 1]?.id ?? "";
-          }
-          if (cid) {
-            await $fetch("/api/webauthn/wrap", {
-              method: "POST",
-              body: { credentialId: cid, wrappedDEK: wrapped },
-            });
-          }
-        }
-      } catch (e) {
-        console.warn(e);
-      }
+    createdCredId = cred?.id ?? cred?.credentialId ?? "";
+    if (!createdCredId) {
+      const list = await $fetch<Array<{ id: string }>>("/api/webauthn/passkeys");
+      createdCredId = list[list.length - 1]?.id ?? "";
     }
-    toast.success("Passkey added successfully");
+
+    const { dek } = useEncryption();
+    const prfResult = cred?.clientExtensionResults?.prf?.results?.first;
+
+    if (prfResult && dek.value && createdCredId) {
+      // Authenticator supports PRF: generate and store DEK wrapper
+      const prfBytes = new Uint8Array(prfResult);
+      const prfKey = await importKeyFromBytes(prfBytes);
+      const b64DEK = await exportKeyToBase64(dek.value);
+      const wrapped = await encryptWithKey(b64DEK, prfKey);
+      await $fetch("/api/webauthn/wrap", {
+        method: "POST",
+        body: { credentialId: createdCredId, wrappedDEK: wrapped },
+      });
+      toast.success("Passkey registered with vault unlock support");
+    } else {
+      // PRF is unsupported on this authenticator/platform
+      toast.success("Passkey registered (Auth only – use password to unlock vault)");
+    }
+
     passKeyName.value = "";
     await refreshNuxtData("passkeys");
   } catch (err: any) {
+    // If registration succeeded but wrapping failed with an exception, cleanup orphaned passkey
+    if (createdCredId) {
+      try {
+        await $fetch("/api/webauthn/passkeys", {
+          method: "DELETE",
+          query: { id: createdCredId },
+        });
+      } catch {}
+    }
     toast.error(err?.data?.message ?? String(err));
     console.error(err);
   } finally {
