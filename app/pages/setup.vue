@@ -65,12 +65,16 @@ const onConfirm = async () => {
     setupComplete.value = true;
     await refreshSession();
     setDEK(key);
-    await set("wrappedDEK:password", wrappedDEK);
-    await set("accounts:cache", { version: 0, updatedAt: new Date().toISOString(), map: {} });
+    try {
+      await set("wrappedDEK:password", wrappedDEK);
+      await set("accounts:cache", { version: 0, updatedAt: new Date().toISOString(), map: {} });
+    } catch {
+      // Local cache write failed, but server account creation succeeded
+    }
     toast.update(id, { message: "Account created", type: "success" });
     showConfirmModal.value = false;
     await navigateTo("/");
-  } catch (e: any) {
+  } catch (e: unknown) {
     toast.update(id, { message: getWriteErrorMessage(e, "create account"), type: "error" });
   } finally {
     loading.value = false;

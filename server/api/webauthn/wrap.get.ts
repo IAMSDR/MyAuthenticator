@@ -6,5 +6,6 @@ export default eventHandler(async (event) => {
   const redis = await getRedis();
   const wrapped = await redis.get(dekPrfKey(credentialId));
   if (!wrapped) throw createError({ statusCode: 404, message: "Wrapper not found – Passkey has no decrypt wrapper, use password login" });
+  setHeader(event, "Cache-Control", "no-store");
   return { wrappedDEK: wrapped };
 });

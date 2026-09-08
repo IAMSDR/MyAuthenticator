@@ -81,7 +81,7 @@ export const matchIcon = async (query: string) => {
         query: {
           query: icon,
           collection: "simple-icons",
-          limit: 10,
+          limit: 32,
         },
       },
     );

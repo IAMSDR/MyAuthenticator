@@ -21,25 +21,40 @@ const extractAccountsFromQrCodeData = async (data: string) => {
   else return;
 };
 
+let isProcessing = false;
+
 const onDetect = async (response: DetectedBarcode[]) => {
-  for (const res of response) {
+  if (isProcessing) return;
+  isProcessing = true;
+
+  try {
+    const uniqueRawValues = [...new Set(response.map((r) => r.rawValue).filter(Boolean))];
+    if (!uniqueRawValues.length) return;
+
     if (!ensureOnline("add scanned authenticators")) return;
-    const accounts: Accounts =
-      (await extractAccountsFromQrCodeData(res.rawValue)) ?? [];
-    if (!accounts.length) {
+
+    const allAccounts: Accounts = [];
+    for (const raw of uniqueRawValues) {
+      const accs = await extractAccountsFromQrCodeData(raw);
+      if (accs && accs.length) allAccounts.push(...accs);
+    }
+
+    if (!allAccounts.length) {
       toast.error("Invalid QR code");
       return;
     }
+
     const { dek } = useEncryption();
     if (!dek.value) {
       toast.error("Vault locked");
       return;
     }
+
     const now = new Date().toISOString();
     let cipher: CipherAccount[] = [];
     try {
       cipher = await Promise.all(
-        accounts.map(async (acc) => {
+        allAccounts.map(async (acc) => {
           const s = await encryptWithKey(acc.secret, dek.value!);
           return {
             ...acc,
@@ -64,30 +79,31 @@ const onDetect = async (response: DetectedBarcode[]) => {
     emit("close");
 
     const toastId = toast.loading("Saving authenticators...");
-    $fetch<{ status: number; message: string; version: number }>("/api/accounts", {
-      method: "POST",
-      body: cipher,
-    })
-      .then(async (res) => {
-        toast.update(toastId, {
-          message: res.message || "Added successfully",
-          type: "success",
-        });
-        await upsertCachedAccounts(cipher, res.version, now);
-      })
-      .catch(async (err) => {
-        toast.update(toastId, {
-          message: getWriteErrorMessage(err, "add scanned authenticators"),
-          type: "error",
-        });
-        // Rollback on failure
-        const addedIds = new Set(cipher.map((c) => c.id));
-        if (accountsData.value) {
-          accountsData.value = accountsData.value.filter((a) => !addedIds.has(a.id));
-        }
-        if (onlineNow()) await refreshNuxtData("accounts");
-        console.error(err);
+    try {
+      const res = await $fetch<{ status: number; message: string; version: number }>("/api/accounts", {
+        method: "POST",
+        body: cipher,
       });
+      toast.update(toastId, {
+        message: res.message || "Added successfully",
+        type: "success",
+      });
+      await upsertCachedAccounts(cipher, res.version, now);
+    } catch (err) {
+      toast.update(toastId, {
+        message: getWriteErrorMessage(err, "add scanned authenticators"),
+        type: "error",
+      });
+      // Rollback on failure
+      const addedIds = new Set(cipher.map((c) => c.id));
+      if (accountsData.value) {
+        accountsData.value = accountsData.value.filter((a) => !addedIds.has(a.id));
+      }
+      if (onlineNow()) await refreshNuxtData("accounts");
+      console.error(err);
+    }
+  } finally {
+    isProcessing = false;
   }
 };
 

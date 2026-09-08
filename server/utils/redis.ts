@@ -14,6 +14,7 @@ async function getIORedisCtor(): Promise<typeof import("ioredis").default> {
 
 type RedisClient = {
   get: (key: string) => Promise<string | null>;
+  getdel: (key: string) => Promise<string | null>;
   set: (key: string, value: string, opts?: { ex?: number; nx?: boolean }) => Promise<string | null | unknown>;
   del: (...keys: string[]) => Promise<number>;
   hgetall: (key: string) => Promise<Record<string, string> | null>;
@@ -30,6 +31,7 @@ type RedisClient = {
 };
 
 let _redis: RedisClient | null = null;
+let _redisPromise: Promise<RedisClient> | null = null;
 let _isUpstash = false;
 
 function createUpstashClient(url: string, token: string): RedisClient {
@@ -37,6 +39,7 @@ function createUpstashClient(url: string, token: string): RedisClient {
   _isUpstash = true;
   return {
     get: (key) => client.get(key) as Promise<string | null>,
+    getdel: (key) => client.getdel(key) as Promise<string | null>,
     set: (key, value, opts) => {
       const upstashOpts: Record<string, unknown> = {};
       if (opts?.ex) upstashOpts.ex = opts.ex;
@@ -98,6 +101,7 @@ async function createIORedisClient(redisUrl: string): Promise<RedisClient> {
   _isUpstash = false;
   return {
     get: (key) => client.get(key),
+    getdel: (key) => client.getdel(key),
     set: (key, value, opts) => {
       const args: unknown[] = [key, value];
       if (opts?.ex) args.push("EX", opts.ex);
@@ -175,34 +179,45 @@ export function versionFromTransaction(results: unknown[], commands: [string, ..
 
 export async function getRedis(): Promise<RedisClient> {
   if (_redis) return _redis;
-  const config = useRuntimeConfig();
-  const upstashUrl = (config.upstashRedisRestUrl as string) || process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || "";
-  const upstashToken = (config.upstashRedisRestToken as string) || process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "";
-  const redisUrl = (config.redisUrl as string) || process.env.REDIS_URL || "";
+  if (_redisPromise) return _redisPromise;
 
-  if (upstashUrl && upstashToken) {
-    _redis = createUpstashClient(upstashUrl, upstashToken);
-    return _redis;
-  }
-  if (redisUrl) {
-    // IORedis is Node-only — on Cloudflare Workers this will throw with a clear
-    // message instead of the cryptic `string_decoder` unenv error.
-    if (typeof process !== "undefined" && (process as unknown as { env?: Record<string,string> }).env?.CF_PAGES) {
-      throw createError({ statusCode: 500, message: "REDIS_URL (ioredis) is not supported on Cloudflare Workers. Use UPSTASH_REDIS_REST_URL + TOKEN." });
+  _redisPromise = (async () => {
+    try {
+      const config = useRuntimeConfig();
+      const upstashUrl = (config.upstashRedisRestUrl as string) || process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || "";
+      const upstashToken = (config.upstashRedisRestToken as string) || process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "";
+      const redisUrl = (config.redisUrl as string) || process.env.REDIS_URL || "";
+
+      if (upstashUrl && upstashToken) {
+        _redis = createUpstashClient(upstashUrl, upstashToken);
+        return _redis;
+      }
+      if (redisUrl) {
+        // IORedis is Node-only — on Cloudflare Workers this will throw with a clear
+        // message instead of the cryptic `string_decoder` unenv error.
+        if (typeof process !== "undefined" && (process as unknown as { env?: Record<string,string> }).env?.CF_PAGES) {
+          throw createError({ statusCode: 500, message: "REDIS_URL (ioredis) is not supported on Cloudflare Workers. Use UPSTASH_REDIS_REST_URL + TOKEN." });
+        }
+        _redis = await createIORedisClient(redisUrl);
+        return _redis;
+      }
+      // Fallback: try env upstash even if config empty (nitro runtime)
+      if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+        _redis = createUpstashClient(process.env.UPSTASH_REDIS_REST_URL, process.env.UPSTASH_REDIS_REST_TOKEN);
+        return _redis;
+      }
+      if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+        _redis = createUpstashClient(process.env.KV_REST_API_URL, process.env.KV_REST_API_TOKEN);
+        return _redis;
+      }
+      throw createError({ statusCode: 500, message: "Redis not configured. Set UPSTASH_REDIS_REST_URL+TOKEN or REDIS_URL" });
+    } catch (err) {
+      _redisPromise = null;
+      throw err;
     }
-    _redis = await createIORedisClient(redisUrl);
-    return _redis;
-  }
-  // Fallback: try env upstash even if config empty (nitro runtime)
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    _redis = createUpstashClient(process.env.UPSTASH_REDIS_REST_URL, process.env.UPSTASH_REDIS_REST_TOKEN);
-    return _redis;
-  }
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    _redis = createUpstashClient(process.env.KV_REST_API_URL, process.env.KV_REST_API_TOKEN);
-    return _redis;
-  }
-  throw createError({ statusCode: 500, message: "Redis not configured. Set UPSTASH_REDIS_REST_URL+TOKEN or REDIS_URL" });
+  })();
+
+  return _redisPromise;
 }
 
 // Helpers
@@ -238,7 +253,9 @@ export async function getAccountsMeta() {
       const all = await redis.hgetall(redisKeys.accounts);
       actualCount = all ? Object.keys(all).length : 0;
     }
-  } catch {}
+  } catch {
+    // ignore
+  }
 
   if (!meta || Object.keys(meta).length === 0) {
     return {

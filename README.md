@@ -80,8 +80,8 @@ KV_REST_API_TOKEN="your-upstash-token"
 
 ### Security Notes (envelope encryption)
 
-- Vault is **client-side zero-knowledge-ish**: a random 256-bit `DEK` is generated on `/setup` via `crypto.getRandomValues(32)`. `DEK` encrypts all `secret` fields (`AES-GCM iv12+ct` via `shared/utils/aes.ts:80`). Password and passkey PRF are `KEK`s that only wrap `DEK` (`auth:dek:password`, `auth:dek:prf:{id}` in Redis, `AES-GCM` ciphertexts).
-- Server never sees `DEK` or `prfSecret`. `auth:passwordHash` (`bcryptjs` cost 12) is for verification only.
+- Vault is **client-side zero-knowledge-ish**: a random 256-bit `DEK` is generated on `/setup` via `crypto.getRandomValues(new Uint8Array(32))`. `DEK` encrypts all `secret` fields (`AES-GCM iv12+ct` via `shared/utils/aes.ts:80`). Password and passkey PRF are `KEK`s that only wrap `DEK` (`auth:dek:password`, `auth:dek:prf:{id}` in Redis, `AES-GCM` ciphertexts).
+- Server never receives or stores the raw `DEK` or `prfSecret`. During password login, the server receives the password to verify `auth:passwordHash` (`bcryptjs` cost 12); the raw `DEK` itself is never transmitted to or stored on the server.
 - `DEK` lives only in memory (`useState('dek')`), cleared on logout/`beforeunload`. `IndexedDB` holds only wrapped DEK + ciphertext cache, never raw `DEK`.
 - If password + all passkey PRF wrappers are lost, `DEK` is unrecoverable → data loss (no wipe/reset endpoint). Change password only when unlocked (re-wraps `DEK`). No recovery.
 - Passkey without `auth:dek:prf:*` wrapper is auth-only and will show “Passkey has no decrypt wrapper, use password login” (blocked per policy).

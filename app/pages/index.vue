@@ -10,7 +10,13 @@ const { setOfflineState } = useOffline();
 
 const sortByOrder = (accounts: CipherAccount[], order?: string[]) => {
   const arr = [...accounts];
-  if (order?.length) arr.sort((a, b) => order!.indexOf(a.id) - order!.indexOf(b.id));
+  if (order?.length) {
+    const getIdx = (id: string) => {
+      const idx = order.indexOf(id);
+      return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+    };
+    arr.sort((a, b) => getIdx(a.id) - getIdx(b.id));
+  }
   return arr;
 };
 

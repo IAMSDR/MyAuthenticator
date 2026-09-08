@@ -43,11 +43,15 @@ const onSubmit = async () => {
         oldPassword: oldPassword.value,
       },
     });
-    const { set } = await import("idb-keyval");
-    await set("wrappedDEK:password", wrapped);
+    try {
+      const { set } = await import("idb-keyval");
+      await set("wrappedDEK:password", wrapped);
+    } catch {
+      toast.error("Password updated on server, but failed to update local offline cache");
+    }
     toast.update(id, { message: "Password changed successfully", type: "success" });
     emit("close");
-  } catch (e: any) {
+  } catch (e: unknown) {
     toast.update(id, { message: getWriteErrorMessage(e, "change password"), type: "error" });
   } finally {
     loading.value = false;

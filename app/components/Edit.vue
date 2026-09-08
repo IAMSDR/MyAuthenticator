@@ -22,7 +22,7 @@ async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
   if (!ensureOnline("save changes")) return;
 
   const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
-  const prevSnapshot = accountsData.value ? [...accountsData.value] : [];
+  const prevAccount = accountsData.value?.find((acc) => acc.id === props.accountId);
 
   // Optimistically update memory so the tile reflects edits instantly
   if (accountsData.value) {
@@ -52,9 +52,11 @@ async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
         message: getWriteErrorMessage(err, "save changes"),
         type: "error",
       });
-      // Rollback on failure
-      if (accountsData.value) {
-        accountsData.value = prevSnapshot;
+      // Rollback only affected account on failure
+      if (accountsData.value && prevAccount) {
+        accountsData.value = accountsData.value.map((acc) =>
+          acc.id === props.accountId ? prevAccount : acc
+        );
       }
       if (onlineNow()) await refreshNuxtData("accounts");
       console.error(err);

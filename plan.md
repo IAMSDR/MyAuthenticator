@@ -58,7 +58,7 @@ Single random `DEK` is the data key; `password` and each passkey PRF are key-enc
 
 - **Chosen:** random `DEK` + `KEK` wrapping over per-secret `encryptWithPassword` (`plan.md:49` Option A). Per-secret PBKDF2 was ~`N * 100k` derivations on every load (~2s/100 items) and password change required re-encrypting all accounts. Envelope: one `PBKDF2` unwrap + `N * AES-GCM` (~50ms), password change = re-wrap single `DEK`.
 - **Cross-device fix retained:** store `wrappedDEK` on server `Redis` and cache wrapped copy in `IndexedDB` — any device fetches `auth:dek:prf:{id}` from `Redis` and unwraps with its locally derived `prfSecret` (`prfSalt` `auth:prfSalt` as `prf.eval.first` input).
-- **Wrapped-only invariant:** never store raw `DEK` or `password` in `Redis`/`IndexedDB`/`localStorage`. `DEK` is generated via `crypto.getRandomValues(32)` and exported as `base64` only for wrapping.
+- **Wrapped-only invariant:** never store raw `DEK` or `password` in `Redis`/`IndexedDB`/`localStorage`. `DEK` is generated via `crypto.getRandomValues(new Uint8Array(32))` and exported as `base64` only for wrapping.
 - **Redis only** — removes `@nuxthub/core` multi-vendor abstraction; user provides `Upstash`/any `Redis` creds and deploys anywhere (CF Workers via `Upstash REST` HTTP, Vercel via `Upstash`, Docker/self-host via `ioredis`). See `upstash.com/docs/redis/features/restapi` `Hash`/`Transactions` ✅ and `upstash.com/pricing` Free `500K` cmds.
 
 ### 4.3 Why Redis Hash `accounts` (detail you asked)
@@ -73,7 +73,7 @@ Redis has 3 ways to store `100` accounts (`~50KB`):
 
 `Hash` internally is `listpack` (≤512 fields) or `hashtable` — `100×500B` stays `listpack` ~`50KB` vs `100` separate keys duplicating prefix. `HGETALL` `O(N)` server-side contiguous, `HSET`/`HGET` `O(1)`. `Upstash REST` `max 10 MB` Free request, `1` `HGETALL` well under. `String`/`per-key` need `2` cmds for read; `Hash` is `1` + `1`.
 
-For `5` sorting edits, don't `HSET` 5 fields — keep `accounts:order string[]` separate: `HSET accounts:order "[...]"` + `HINCRBY accounts:meta version 1` `2` cmds in `1` `multi-exec` atomic (`Transactions` ✅) vs `5` `HSET`.
+For `5` sorting edits, don't `HSET` 5 fields — keep `accounts:order string[]` separate: `SET accounts:order "[...]"` + `HINCRBY accounts:meta version 1` `2` cmds in `1` `multi-exec` atomic (`Transactions` ✅) vs `5` `HSET`.
 
 ## 5) Data Model — Redis Only
 
@@ -106,20 +106,20 @@ Client cache (`app/utils/cache.ts` new, `idb-keyval` `IndexedDB` preferred over 
 
 1. `app/middleware/auth.ts` + global middleware: `GET /api/auth/status` -> if `!setupComplete` -> `navigateTo('/setup')` (not `/login`).
 2. `/setup` page: single password field + confirm + strength meter (reuse `loginSchema` password regex `shared/types/index.ts:28` or relax per your `will decide` — keep strong rule default). No username.
-3. On submit: client generates `DEK`: `raw32 = getRandomValues(32)`, `DEK = await importKeyFromBytes(raw32)` (new helper `subtle.importKey('raw', bytes, 'AES-GCM', true, ['encrypt','decrypt'])`), export `b64DEK = base64(raw32)`, `wrappedPw = await encryptWithPassword(b64DEK, password)`. Send `password` + `wrappedPw` to `POST /api/auth/setup` (HTTPS). Server: if `setupComplete` exists -> 409. Else `hash = await argon2.hash(password)` -> `redis.set('auth:passwordHash', hash)`; `redis.set('auth:prfSalt', randomBase64url)`; `redis.set('auth:dek:password', wrappedPw)`; `redis.set('auth:setupComplete','true')`; `redis.hset('accounts:meta', {version:0, updatedAt: new Date().toISOString(), count:0})`; `redis.del('accounts')`; `setUserSession({user:"admin"})` return 200. Client then holds `DEK` (`CryptoKey`) in `useEncryptionKey()` memory (`useState('dek')`) and navigates `/`. Also `idb.set('wrappedDEK:password', wrappedPw)` cache (wrapped only). Init cache `idb.set('accounts:cache', {version:0, map:{}})`.
+3. On submit: client generates `DEK`: `raw32 = crypto.getRandomValues(new Uint8Array(32))`, `DEK = await importKeyFromBytes(raw32)` (new helper `subtle.importKey('raw', bytes, 'AES-GCM', true, ['encrypt','decrypt'])`), export `b64DEK = base64(raw32)`, `wrappedPw = await encryptWithPassword(b64DEK, password)`. Send `password` + `wrappedPw` to `POST /api/auth/setup` (HTTPS). Server: if `setupComplete` exists -> 409. Else `hash = await argon2.hash(password)` -> `redis.set('auth:passwordHash', hash)`; `redis.set('auth:prfSalt', randomBase64url)`; `redis.set('auth:dek:password', wrappedPw)`; `redis.set('auth:setupComplete','true')`; `redis.hset('accounts:meta', {version:0, updatedAt: new Date().toISOString(), count:0})`; `redis.del('accounts')`; `setUserSession({user:"admin"})` return 200. Client then holds `DEK` (`CryptoKey`) in `useEncryptionKey()` memory (`useState('dek')`) and navigates `/`. Also `idb.set('wrappedDEK:password', wrappedPw)` cache (wrapped only). Init cache `idb.set('accounts:cache', {version:0, map:{}})`.
 4. Auto-prompt passkey register after setup (optional).
 
 ### 6.2 Login — Password
 
 1. `/login` (no username field). User enters `password`.
-2. `POST /api/auth/login {password}` -> server `hash = await redis.get('auth:passwordHash')`; `argon2.verify(hash, password)` -> if false 401; else `wrappedDEK = await redis.get('auth:dek:password')`; `setUserSession({user:"admin"})` return `200 {wrappedDEK}`. Wrap is also cached in IndexedDB as `wrappedDEK:password` if client prefers local cache path.
+2. `POST /api/auth/login {password}` -> server checks rate limit (e.g. 10 attempts per 10m lockout); `hash = await redis.get('auth:passwordHash')`; `argon2.verify(hash, password)` -> if false 401; else `wrappedDEK = await redis.get('auth:dek:password')`; `setUserSession({user:"admin"})` return `200 {wrappedDEK}` (the raw DEK is never received or stored on the server). Wrap is also cached in IndexedDB as `wrappedDEK:password` if client prefers local cache path.
 3. Client on 200: `b64DEK = await decryptWithPassword(wrappedDEK, password)` (`shared/utils/aes.ts:50`), `DEK = await importKeyFromBase64(b64DEK)` (decode base64 -> `importKeyFromBytes`), store `DEK` in `useState('dek')` memory (cleared `onUnmounted` + `beforeunload` + `logout` clears). Also `idb.set('wrappedDEK:password', wrappedDEK)` for next offline lookup (wrapped only). Then `GET /api/accounts/meta` check cache version (see 6.3 fast path) or `refreshNuxtData('accounts')`.
 4. `GET /api/accounts/meta` -> `redis.hgetall('accounts:meta')` -> `{version, updatedAt, count}` (1 cmd `HGETALL` meta). Client compares `cached.version` (from `idb.get('accounts:cache')`) with `server.version`: if equal -> use cached `map` (no `/accounts` call). If stale/missing -> `GET /api/accounts` -> `redis.hgetall('accounts')` -> returns `Map<id,json>` values as array (1 cmd `HGETALL accounts`) + `redis.get('accounts:order')` if exists -> cache `idb.set('accounts:cache', {version, map})` and return ciphertext array as-is (no server decrypt).
 5. `app/pages/index.vue:6` client loop: `for (a of data) a.secret = await decryptWithKey(a.secret, DEK)` (`shared/utils/aes.ts:98`) into computed `decryptedAccounts` (keep raw ciphertext cache for write-back). Cost: one PBKDF2 unwrap + N AES-GCM. Filtering by `folderId`/`order` uses cached `accounts:order` client-side.
 
 ### 6.3 Create / Edit / Delete Account + Sync
 
-- **Create:** `Add.vue` / `Form.vue` creates plaintext `Account` -> client `account.secret = await encryptWithKey(secret, DEK)` (`shared/utils/aes.ts:80` `iv12+ct`) plus `id=crypto.randomUUID()` -> `POST /api/accounts {cipherAccount}`. Server `multi-exec` atomic (Upstash `POST /multi-exec` `Transactions` ✅): `[["HSET","accounts",id,json],["HINCRBY","accounts:meta","version",1],["HSET","accounts:meta","updatedAt",iso],["HINCRBY","accounts:meta","count",1]]` -> return `{version}`. Client updates `idb` cache `map[id]=cipher` and `version`, no full refetch.
+- **Create:** `Add.vue` / `Form.vue` creates plaintext `Account` -> client `account.secret = await encryptWithKey(secret, DEK)` (`shared/utils/aes.ts:80` `iv12+ct`) plus `id=crypto.randomUUID()` -> `POST /api/accounts {cipherAccount}`. Server checks existence and runs `multi-exec` atomic transaction with `HSET accounts`, conditional count increment, and version/updatedAt updates -> return `{version}`. Client updates `idb` cache `map[id]=cipher` and `version`, no full refetch.
 
 - **Edit label/issuer/icon/folderId** (no `secret` touch): `PATCH /api/accounts/:id {fields}` -> server `HGET accounts {id}` -> merge plaintext fields -> `HSET accounts {id} {json}` + `HINCRBY accounts:meta version 1` in same `multi-exec` (`1` HTTP `2-3` cmds billed). Single-field `HSET` touches one `Hash` field, not `99` others. Return `version`.
 
@@ -280,7 +280,7 @@ Since zero-knowledge with DEK envelope and no recovery, provide explicit wipe on
 - **A2 cache-first vault load** (`index.vue`): render from IndexedDB ciphertext cache immediately; online → reconcile with server `meta` version; offline → decrypt cache with in-memory DEK, set `isOffline` flag.
 - **A3 offline-aware route guard** (`middleware/auth.ts`): stop hard-blocking on `$fetch("/api/auth/status")`; use cached `setupComplete` + session presence; allow `/` offline with unlocked cached vault.
 - **A4 writes → friendly offline error** (`app/utils/offline.ts` + write components): guard each write with an offline check → clear "You're offline — can't save right now" toast instead of a raw network error. Read-only offline.
-- **A5 service-worker app-shell** (`nuxt.config.ts`): keep existing precache + `navigateFallback`; add minimal Workbox `runtimeCaching` for `/api/accounts/meta` and `/api/accounts` (NetworkFirst / CacheFirst) as a secondary cache layer beside IndexedDB. Do NOT touch icon config.
+- **A5 service-worker app-shell** (`nuxt.config.ts`): keep existing precache + `navigateFallback`; do not add runtime caching for `/api/accounts/meta` or `/api/accounts` (IndexedDB provides partitioned local vault caching without exposing account data across sessions). Preserve icon configuration.
 
 ### 15.3 Part B — Lower Redis commands (all four)
 

@@ -75,7 +75,8 @@ const deleteAccount = async () => {
 
   const targetId = props.account.id;
   const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
-  const prevSnapshot = accountsData.value ? [...accountsData.value] : [];
+  const prevAccount = props.account;
+  const prevIndex = accountsData.value ? accountsData.value.findIndex((a) => a.id === targetId) : -1;
 
   if (accountsData.value) {
     accountsData.value = accountsData.value.filter((a) => a.id !== targetId);
@@ -98,8 +99,14 @@ const deleteAccount = async () => {
         message: getWriteErrorMessage(err, "delete this authenticator"),
         type: "error",
       });
-      if (accountsData.value) {
-        accountsData.value = prevSnapshot;
+      if (accountsData.value && prevAccount && !accountsData.value.some((a) => a.id === targetId)) {
+        const next = [...accountsData.value];
+        if (prevIndex >= 0 && prevIndex <= next.length) {
+          next.splice(prevIndex, 0, prevAccount);
+        } else {
+          next.push(prevAccount);
+        }
+        accountsData.value = next;
       }
       if (onlineNow()) await refreshNuxtData("accounts");
     });

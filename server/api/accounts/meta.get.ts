@@ -1,4 +1,5 @@
-export default eventHandler(async () => {
+export default eventHandler(async (event) => {
+  await requireUserSession(event);
   const meta = await getAccountsMeta();
   const redis = await getRedis();
   const rawOrder = await redis.get(redisKeys.accountsOrder);

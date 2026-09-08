@@ -134,7 +134,11 @@ const restoreFromEncryptedBackupFile = async () => {
   let accounts: Accounts = [];
   try {
     const decrypted = await decryptWithPassword(fileContent, password.value);
-    accounts = JSON.parse(decrypted) as Accounts;
+    const parsed = JSON.parse(decrypted);
+    const validated = accountsSchema.safeParse(parsed);
+    if (validated.success) {
+      accounts = validated.data;
+    }
   } catch (error) {
     console.error("Error decrypting file:", error);
   }
@@ -157,7 +161,7 @@ const restoreFromEncryptedBackupFile = async () => {
   try {
     cipher = await Promise.all(
       accounts.map(async (acc) => {
-        const { id: _o, ...remain } = acc as any;
+        const { id: _o, ...remain } = acc as Account & { id?: string };
         const s = await encryptWithKey(remain.secret, dek.value!);
         return {
           ...remain,
@@ -215,8 +219,10 @@ const restoreFromUriListFile = async () => {
   const toastId = toast.loading("Restoring...");
   loading.value = true;
   const fileContent = await readFileContent(file.value.files[0]);
-  const accounts = await extractAccountsFromUriList(fileContent.split("\n"));
-  if (!accounts?.length) {
+  const rawAccounts = await extractAccountsFromUriList(fileContent.split("\n"));
+  const validated = accountsSchema.safeParse(rawAccounts);
+  const accounts = validated.success ? validated.data : [];
+  if (!accounts.length) {
     toast.update(toastId, {
       message: "Invalid file",
       type: "error",

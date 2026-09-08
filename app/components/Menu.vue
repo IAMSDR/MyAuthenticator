@@ -4,7 +4,6 @@ import ThemePicker from "./ThemePicker.vue";
 import Passkeys from "./Passkeys.vue";
 import BackupAndRestore from "./BackupAndRestore.vue";
 import ChangePassword from "./ChangePassword.vue";
-import { clearAllLocalVaultData } from "~/utils/cache";
 
 const emit = defineEmits(["close"]);
 const { clear } = useUserSession();
@@ -19,7 +18,6 @@ const changePasswordModal = overlay.create(ChangePassword);
 const logout = async () => {
   emit("close");
   clearDEK();
-  await clearAllLocalVaultData();
   // Do not delete Workbox precache caches — would break offline refresh.
   // Only clear volatile runtime caches if needed (e.g. iconify-api), keep 'workbox-precache-*'.
   if (import.meta.client && "caches" in window) {
@@ -29,13 +27,15 @@ const logout = async () => {
       // Further restrict to our runtime caches; keep precache intact.
       const runtimeOnly = deletable.filter((n) => n === "iconify-api");
       await Promise.all(runtimeOnly.map((name) => window.caches.delete(name)));
-    } catch {}
+    } catch {
+      // ignore cache clearing error
+    }
   }
   // Offline: no server call — local lock/logout still completes.
   if (typeof navigator === "undefined" || navigator.onLine !== false) {
     await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
   }
-  await clear();
+  await clear().catch(() => {});
   await navigateTo("/login", { replace: true });
 };
 

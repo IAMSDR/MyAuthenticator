@@ -3,25 +3,24 @@ export default defineWebAuthnRegisterEventHandler({
     const redis = await getRedis();
     await redis.set(challengeKey(attemptId), challenge, { ex: 60 });
   },
-  async getChallenge(event, attemptId) {
+  async getChallenge(_event, attemptId) {
     const redis = await getRedis();
-    const challenge = await redis.get(challengeKey(attemptId));
+    const challenge = await redis.getdel(challengeKey(attemptId));
     if (!challenge) {
       throw createError({
         statusCode: 400,
         message: "Challenge not found or expired",
       });
     }
-    await redis.del(challengeKey(attemptId));
-    return challenge as string;
+    return challenge;
   },
   // @ts-expect-error simplewebauthn v13 PRF client extension typing
-  async getOptions(event) {
+  async getOptions(_event) {
     const redis = await getRedis();
     const prfSalt = await redis.get(redisKeys.prfSalt);
     if (prfSalt) {
       const b64 = prfSalt.replace(/-/g, "+").replace(/_/g, "/");
-      const prfBytes = Uint8Array.from(Buffer.from(b64, "base64")).buffer;
+      const prfBytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
       return {
         extensions: {
           prf: {

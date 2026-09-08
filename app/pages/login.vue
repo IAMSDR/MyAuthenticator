@@ -113,14 +113,38 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
       return;
     }
 
-    const res = await $fetch<{ wrappedDEK: string; message: string }>("/api/auth/login", {
-      method: "POST",
-      body: event.data,
-    });
+    let res: { wrappedDEK: string; message: string };
+    try {
+      res = await $fetch<{ wrappedDEK: string; message: string }>("/api/auth/login", {
+        method: "POST",
+        body: event.data,
+      });
+    } catch (fetchErr: unknown) {
+      if (isNetworkError(fetchErr)) {
+        const ok = await unlockWithPassword(event.data.password);
+        if (ok) {
+          setOfflineState(true);
+          toast.update(toastid, { message: "Unlocked offline", type: "success" });
+          await navigateTo("/");
+          return;
+        }
+        toast.update(toastid, {
+          message: offlineMessage("log in"),
+          type: "error",
+        });
+        return;
+      }
+      throw fetchErr;
+    }
+
     const b64DEK = await decryptWithPassword(res.wrappedDEK, event.data.password);
     const dek = await importKeyFromBase64(b64DEK);
     setDEK(dek);
-    await set("wrappedDEK:password", res.wrappedDEK);
+    try {
+      await set("wrappedDEK:password", res.wrappedDEK);
+    } catch {
+      // ignore local cache error
+    }
     setOfflineState(false);
     await refreshSession();
     toast.update(toastid, {
@@ -129,23 +153,8 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
     });
     await navigateTo("/");
   } catch (e: any) {
-    // Only fallback to cached vault on true network failures, not on 4xx server rejections (wrong password)
-    if (isNetworkError(e)) {
-      const ok = await unlockWithPassword(event.data.password);
-      if (ok) {
-        setOfflineState(true);
-        toast.update(toastid, { message: "Unlocked offline", type: "success" });
-        await navigateTo("/");
-        return;
-      }
-      toast.update(toastid, {
-        message: offlineMessage("log in"),
-        type: "error",
-      });
-      return;
-    }
     toast.update(toastid, {
-      message: e?.data?.message ?? String(e),
+      message: e?.data?.message ?? (e instanceof Error ? e.message : String(e)),
       type: "error",
     });
   } finally {

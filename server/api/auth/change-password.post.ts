@@ -13,8 +13,10 @@ export default eventHandler(async (event) => {
   if (!ok) throw createError({ statusCode: 401, message: "Current password incorrect" });
 
   const hash = await bcryptHash(data.password);
-  await redis.set(redisKeys.passwordHash, hash);
-  await redis.set(redisKeys.dekPassword, data.newWrappedDEK);
+  await runTransaction([
+    ["SET", redisKeys.passwordHash, hash],
+    ["SET", redisKeys.dekPassword, data.newWrappedDEK],
+  ]);
 
   return { status: 200, message: "Password changed successfully" };
 });

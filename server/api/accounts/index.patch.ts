@@ -5,6 +5,9 @@ export default eventHandler(async (event) => {
   if (!id) throw createError({ statusCode: 400, message: "Missing id" });
 
   const body = await readBody(event);
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw createError({ statusCode: 400, message: "Invalid body" });
+  }
   // Allow partial cipherAccount or edit fields
   const redis = await getRedis();
   const existingJson = await redis.hget(redisKeys.accounts, id);
