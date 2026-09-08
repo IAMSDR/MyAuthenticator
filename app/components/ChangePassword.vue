@@ -62,7 +62,7 @@ const onSubmit = async () => {
 <template>
   <AdaptiveModal
     title="Change Password"
-    description="Update your master encryption password"
+    description="Update your encryption password"
   >
     <template #body>
       <form class="space-y-4" @submit.prevent="onSubmit">
@@ -70,7 +70,7 @@ const onSubmit = async () => {
           <UInput
             v-model="oldPassword"
             :type="show ? 'text' : 'password'"
-            placeholder="Current master password"
+            placeholder="Current password"
             icon="i-lucide-lock"
             size="md"
             required
@@ -82,7 +82,7 @@ const onSubmit = async () => {
           <UInput
             v-model="newPassword"
             :type="show ? 'text' : 'password'"
-            placeholder="New master password (min 8 chars)"
+            placeholder="New password (min 8 chars)"
             icon="i-lucide-key-round"
             size="md"
             required
@@ -94,7 +94,7 @@ const onSubmit = async () => {
           <UInput
             v-model="confirm"
             :type="show ? 'text' : 'password'"
-            placeholder="Confirm new master password"
+            placeholder="Confirm new password"
             icon="i-lucide-key-round"
             size="md"
             required

@@ -60,7 +60,7 @@ const items = [
   },
   {
     label: "Change Password",
-    description: "Update your master vault password",
+    description: "Update your vault password",
     icon: "i-lucide-key-round",
     action: () => changePasswordModal.open(),
   },

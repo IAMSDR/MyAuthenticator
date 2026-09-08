@@ -19,7 +19,7 @@ const show = ref(false);
 
 const loginWithPasskey = async () => {
   if (!onlineNow()) {
-    toast.error("Passkey login requires an internet connection. Use master password offline.");
+    toast.error("Passkey login requires an internet connection. Use password offline.");
     return;
   }
   loading.value = true;
@@ -64,7 +64,7 @@ const loginWithPasskey = async () => {
       // Logout session so user is not stuck in half-authenticated state without DEK
       if (onlineNow()) await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
       toast.update(id, {
-        message: "Passkey authenticated, but cannot unlock vault. Enter master password to unlock.",
+        message: "Passkey authenticated, but cannot unlock vault. Enter password to unlock.",
         type: "error",
       });
       return;
@@ -73,7 +73,7 @@ const loginWithPasskey = async () => {
     if (!prfResult) {
       if (onlineNow()) await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
       toast.update(id, {
-        message: "Authenticator did not return PRF secret. Enter master password to unlock vault.",
+        message: "Authenticator did not return PRF secret. Enter password to unlock vault.",
         type: "error",
       });
       return;
@@ -178,7 +178,7 @@ async function onError(event: FormErrorEvent) {
           Unlock your vault
         </h1>
         <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-          Enter your master password to decrypt authenticators
+          Enter your password to decrypt authenticators
         </p>
       </div>
 
