@@ -1,9 +1,32 @@
 import * as OTPAuth from "otpauth";
 import { Payload, type Payload_OtpParameters } from "./proto/google";
+import {
+  findCachedIconMatch,
+  getCachedIconSearch,
+  setCachedIconSearch,
+} from "./iconCache";
+
+const toIconEntry = (icon: string) => {
+  const parts = icon.split(":");
+  const collection = parts[0];
+  const name = parts[1] || "";
+  return {
+    label: name.replace(/[-_]/g, " "),
+    description: collection,
+    icon: `i-${collection}-${name}`,
+  };
+};
 
 export const getIcons = async (query: string) => {
   const clean = query?.trim();
   if (!clean) return [];
+
+  // Offline: no server call — immediately serve IDB/default fallback.
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    const cached = await getCachedIconSearch(clean);
+    if (cached?.length) return cached;
+    return [{ label: clean, icon: defaultIcon }];
+  }
 
   try {
     const res = await $fetch<{ icons: string[] }>(
@@ -17,25 +40,20 @@ export const getIcons = async (query: string) => {
     );
 
     if (!res.icons || !res.icons.length) {
-      return [
-        {
-          label: clean,
-          icon: defaultIcon,
-        },
-      ];
+      // Remember the fallback too so offline searches stay consistent.
+      const fallback = [{ label: clean, icon: defaultIcon }];
+      await setCachedIconSearch(clean, fallback);
+      return fallback;
     }
 
-    return res.icons.map((icon) => {
-      const parts = icon.split(":");
-      const collection = parts[0];
-      const name = parts[1] || "";
-      return {
-        label: name.replace(/[-_]/g, " "),
-        description: collection,
-        icon: `i-${collection}-${name}`,
-      };
-    });
+    const mapped = res.icons.map(toIconEntry);
+    // Cache for offline use (previously searched/used icons resolve from IDB).
+    await setCachedIconSearch(clean, mapped);
+    return mapped;
   } catch {
+    // Fetch failure: serve previously cached results for this query when available.
+    const cached = await getCachedIconSearch(clean);
+    if (cached?.length) return cached;
     return [
       {
         label: clean,
@@ -48,6 +66,13 @@ export const getIcons = async (query: string) => {
 export const matchIcon = async (query: string) => {
   const icon = query?.toLowerCase().trim();
   if (!icon) return defaultIcon;
+
+  // Offline: no server call — resolve from IDB directly.
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    const cached = await findCachedIconMatch(icon);
+    if (cached) return cached;
+    return defaultIcon;
+  }
 
   try {
     const res = await $fetch<{ icons: string[] }>(
@@ -65,10 +90,17 @@ export const matchIcon = async (query: string) => {
       const match =
         res.icons.find((i) => i.startsWith("simple-icons:")) || res.icons[0];
       if (match) {
-        return `i-${match.replace(":", "-")}`;
+        const entry = toIconEntry(match);
+        await setCachedIconSearch(icon, [entry]);
+        return entry.icon;
       }
     }
-  } catch {}
+  } catch {
+    // Fetch failure: resolve from previously cached icons.
+    const cached = await findCachedIconMatch(icon);
+    if (cached) return cached;
+    return defaultIcon;
+  }
 
   return defaultIcon;
 };

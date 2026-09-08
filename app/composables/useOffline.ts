@@ -8,17 +8,40 @@ export const useOffline = () => {
     isOffline.value = offline;
   };
 
-  // Keep the banner in sync with live connectivity changes (not just on load).
+  // Keep the state in sync with live connectivity changes and auto-refresh on reconnection.
   if (import.meta.client) {
-    const sync = () => setOfflineState(!onlineNow());
-    onMounted(() => {
-      window.addEventListener("online", sync);
-      window.addEventListener("offline", sync);
-    });
-    onUnmounted(() => {
-      window.removeEventListener("online", sync);
-      window.removeEventListener("offline", sync);
-    });
+    const g = globalThis as unknown as { __offlineListenersRegistered?: boolean };
+    if (!g.__offlineListenersRegistered) {
+      g.__offlineListenersRegistered = true;
+
+      const handleOnline = async () => {
+        useState<boolean>("offline", () => false).value = false;
+        // 1. Check for Service Worker updates to fetch latest UI/assets
+        if ("serviceWorker" in navigator) {
+          try {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg) {
+              await reg.update();
+            }
+          } catch (err) {
+            console.debug("Service worker update check skipped:", err);
+          }
+        }
+        // 2. Fetch fresh account data from server
+        try {
+          await refreshNuxtData("accounts");
+        } catch (err) {
+          console.debug("Accounts sync skipped:", err);
+        }
+      };
+
+      const handleOffline = () => {
+        useState<boolean>("offline", () => false).value = true;
+      };
+
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", handleOffline);
+    }
   }
 
   return { isOffline, setOfflineState, onlineNow };

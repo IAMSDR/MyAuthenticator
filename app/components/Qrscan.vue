@@ -3,7 +3,7 @@ import AdaptiveModal from "./AdaptiveModal.vue";
 import { QrcodeStream, QrcodeCapture } from "vue-qrcode-reader";
 import type { DetectedBarcode } from "barcode-detector/pure";
 import { toast } from "@steveyuowo/vue-hot-toast";
-import { ensureOnline } from "~/utils/offline";
+import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
 const emit = defineEmits(["close"]);
 
@@ -77,7 +77,7 @@ const onDetect = async (response: DetectedBarcode[]) => {
       })
       .catch(async (err) => {
         toast.update(toastId, {
-          message: err?.data?.message ?? String(err),
+          message: getWriteErrorMessage(err, "add scanned authenticators"),
           type: "error",
         });
         // Rollback on failure
@@ -85,7 +85,7 @@ const onDetect = async (response: DetectedBarcode[]) => {
         if (accountsData.value) {
           accountsData.value = accountsData.value.filter((a) => !addedIds.has(a.id));
         }
-        await refreshNuxtData("accounts");
+        if (onlineNow()) await refreshNuxtData("accounts");
         console.error(err);
       });
   }

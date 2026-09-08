@@ -3,6 +3,7 @@ import { toast } from "@steveyuowo/vue-hot-toast";
 import { set } from "idb-keyval";
 import BackgroundGlow from "~/components/BackgroundGlow.vue";
 import AdaptiveModal from "~/components/AdaptiveModal.vue";
+import { ensureOnline, getWriteErrorMessage } from "~/utils/offline";
 
 const { fetch: refreshSession } = useUserSession();
 const { setDEK } = useEncryption();
@@ -53,6 +54,7 @@ const onConfirm = async () => {
     toast.error('Please type "I confirm"');
     return;
   }
+  if (!ensureOnline("create account")) return;
   loading.value = true;
   const id = toast.loading("Creating account...");
   try {
@@ -69,7 +71,7 @@ const onConfirm = async () => {
     showConfirmModal.value = false;
     await navigateTo("/");
   } catch (e: any) {
-    toast.update(id, { message: e?.data?.message ?? String(e), type: "error" });
+    toast.update(id, { message: getWriteErrorMessage(e, "create account"), type: "error" });
   } finally {
     loading.value = false;
   }

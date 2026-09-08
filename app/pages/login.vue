@@ -3,7 +3,7 @@ import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import { set } from "idb-keyval";
 import { startAuthentication } from "@simplewebauthn/browser";
-import { onlineNow } from "~/utils/offline";
+import { isNetworkError, offlineMessage, onlineNow } from "~/utils/offline";
 import BackgroundGlow from "~/components/BackgroundGlow.vue";
 
 const { fetch: refreshSession } = useUserSession();
@@ -62,7 +62,7 @@ const loginWithPasskey = async () => {
     } catch (e: any) {
       // Passkey exists for authentication, but has no DEK wrapper (registered without PRF)
       // Logout session so user is not stuck in half-authenticated state without DEK
-      await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+      if (onlineNow()) await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
       toast.update(id, {
         message: "Passkey authenticated, but cannot unlock vault. Enter master password to unlock.",
         type: "error",
@@ -71,7 +71,7 @@ const loginWithPasskey = async () => {
     }
 
     if (!prfResult) {
-      await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+      if (onlineNow()) await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
       toast.update(id, {
         message: "Authenticator did not return PRF secret. Enter master password to unlock vault.",
         type: "error",
@@ -85,6 +85,7 @@ const loginWithPasskey = async () => {
     const dek = await importKeyFromBase64(b64DEK);
     setDEK(dek);
     await set(`wrappedDEK:prf:${credentialId}`, wrappedData.wrappedDEK);
+    setOfflineState(false);
     await refreshSession();
     toast.update(id, { message: "Passkey login successful", type: "success" });
     await navigateTo("/");
@@ -99,6 +100,19 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
   loading.value = true;
   const toastid = toast.loading("Verifying...");
   try {
+    // Instant offline unlock without waiting for network timeout
+    if (!onlineNow()) {
+      const ok = await unlockWithPassword(event.data.password);
+      if (ok) {
+        setOfflineState(true);
+        toast.update(toastid, { message: "Unlocked offline", type: "success" });
+        await navigateTo("/");
+        return;
+      }
+      toast.update(toastid, { message: "Incorrect password or no cached vault data.", type: "error" });
+      return;
+    }
+
     const res = await $fetch<{ wrappedDEK: string; message: string }>("/api/auth/login", {
       method: "POST",
       body: event.data,
@@ -107,6 +121,7 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
     const dek = await importKeyFromBase64(b64DEK);
     setDEK(dek);
     await set("wrappedDEK:password", res.wrappedDEK);
+    setOfflineState(false);
     await refreshSession();
     toast.update(toastid, {
       message: res.message,
@@ -114,15 +129,19 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
     });
     await navigateTo("/");
   } catch (e: any) {
-    if (!onlineNow()) {
+    // Only fallback to cached vault on true network failures, not on 4xx server rejections (wrong password)
+    if (isNetworkError(e)) {
       const ok = await unlockWithPassword(event.data.password);
       if (ok) {
         setOfflineState(true);
-        toast.update(toastid, { message: "Offline mode", type: "success" });
+        toast.update(toastid, { message: "Unlocked offline", type: "success" });
         await navigateTo("/");
         return;
       }
-      toast.update(toastid, { message: "Offline and no cached unlock.", type: "error" });
+      toast.update(toastid, {
+        message: offlineMessage("log in"),
+        type: "error",
+      });
       return;
     }
     toast.update(toastid, {

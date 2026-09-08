@@ -2,7 +2,7 @@
 import AdaptiveModal from "./AdaptiveModal.vue";
 import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
 import { toast } from "@steveyuowo/vue-hot-toast";
-import { ensureOnline } from "~/utils/offline";
+import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
 const props = defineProps<{ account: AccountEdit; accountId: string }>();
 
@@ -49,14 +49,14 @@ async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
     })
     .catch(async (err) => {
       toast.update(toastid, {
-        message: err?.data?.message ?? String(err),
+        message: getWriteErrorMessage(err, "save changes"),
         type: "error",
       });
       // Rollback on failure
       if (accountsData.value) {
         accountsData.value = prevSnapshot;
       }
-      await refreshNuxtData("accounts");
+      if (onlineNow()) await refreshNuxtData("accounts");
       console.error(err);
     });
 }

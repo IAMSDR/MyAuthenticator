@@ -4,6 +4,7 @@ import { h } from "vue";
 import type { TableColumn } from "@nuxt/ui";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import { startRegistration } from "@simplewebauthn/browser";
+import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
 const UButton = resolveComponent("UButton");
 
@@ -12,6 +13,7 @@ const { data: passkeys, status } = await useLazyFetch(
   {
     key: "passkeys",
     server: false,
+    immediate: typeof navigator === "undefined" || navigator.onLine !== false,
   }
 );
 
@@ -48,6 +50,7 @@ const addPasskey = async () => {
     toast.error("Enter a device name");
     return;
   }
+  if (!ensureOnline("manage passkeys")) return;
   loading.value = true;
   let createdCredId: string | null = null;
   try {
@@ -107,10 +110,11 @@ const addPasskey = async () => {
     }
 
     passKeyName.value = "";
-    await refreshNuxtData("passkeys");
+    if (onlineNow()) await refreshNuxtData("passkeys");
   } catch (err: any) {
     // If registration succeeded on server but wrapping failed, cleanup credential
-    if (createdCredId) {
+    // Do not send server writes while offline.
+    if (createdCredId && onlineNow()) {
       try {
         await $fetch("/api/webauthn/passkeys", {
           method: "DELETE",
@@ -118,7 +122,7 @@ const addPasskey = async () => {
         });
       } catch {}
     }
-    toast.error(err?.data?.message ?? String(err));
+    toast.error(getWriteErrorMessage(err, "manage passkeys"));
     console.error(err);
   } finally {
     loading.value = false;
@@ -126,6 +130,7 @@ const addPasskey = async () => {
 };
 
 const deletePasskey = async (id: string) => {
+  if (!ensureOnline("manage passkeys")) return;
   const isSure = confirm(
     "Delete this passkey? You won't be able to use it to log in again."
   );
@@ -140,12 +145,12 @@ const deletePasskey = async (id: string) => {
         message: (res as any).message,
         type: "success",
       });
-      await refreshNuxtData("passkeys");
+      if (onlineNow()) await refreshNuxtData("passkeys");
     })
-    .catch((err) => {
+    .catch((err: any) => {
       console.error(err);
       toast.update(toastid, {
-        message: err?.data?.message ?? String(err),
+        message: getWriteErrorMessage(err, "manage passkeys"),
         type: "error",
       });
     });

@@ -1,30 +1,22 @@
-import * as nodeCrypto from "node:crypto";
-
 const getSubtle = (): SubtleCrypto => {
-  if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.subtle) {
+  if (typeof globalThis !== "undefined" && globalThis.crypto?.subtle) {
     return globalThis.crypto.subtle;
   }
-  if (typeof window !== "undefined" && window.crypto && window.crypto.subtle) {
+  if (typeof window !== "undefined" && window.crypto?.subtle) {
     return window.crypto.subtle;
-  }
-  if (nodeCrypto.webcrypto && nodeCrypto.webcrypto.subtle) {
-    return nodeCrypto.webcrypto.subtle as unknown as SubtleCrypto;
   }
   throw new Error("SubtleCrypto is not available in this environment (ensure you are on localhost or HTTPS)");
 };
 
 const getRandomBytes = (length: number): Uint8Array => {
   const bytes = new Uint8Array(length);
-  if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.getRandomValues) {
+  if (typeof globalThis !== "undefined" && globalThis.crypto?.getRandomValues) {
     return globalThis.crypto.getRandomValues(bytes);
   }
-  if (typeof window !== "undefined" && window.crypto && window.crypto.getRandomValues) {
+  if (typeof window !== "undefined" && window.crypto?.getRandomValues) {
     return window.crypto.getRandomValues(bytes);
   }
-  if (nodeCrypto.webcrypto && nodeCrypto.webcrypto.getRandomValues) {
-    return nodeCrypto.webcrypto.getRandomValues(bytes) as Uint8Array;
-  }
-  return nodeCrypto.randomBytes(length);
+  throw new Error("crypto.getRandomValues is not available");
 };
 
 export const importKeyFromBytes = async (bytes: Uint8Array): Promise<CryptoKey> => {

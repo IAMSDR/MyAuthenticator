@@ -1,5 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  ssr: false,
   devtools: { enabled: false },
   modules: [
     "@nuxt/ui",
@@ -41,6 +42,7 @@ export default defineNuxtConfig({
     webAuthn: true,
   },
   pwa: {
+    registerType: "autoUpdate",
     includeAssets: ["favicon.ico", "favicon-16x16.png"],
     manifest: {
       name: "MyAuthenticator",
@@ -61,24 +63,48 @@ export default defineNuxtConfig({
       ],
     },
     workbox: {
-      globPatterns: ["**/*.{js,css,png,svg,ico,woff2}"],
+      navigateFallback: "/",
+      navigateFallbackDenylist: [/^\/api/],
+      globPatterns: ["**/*.{js,css,html,png,svg,ico,woff2,json,webmanifest}"],
+      cleanupOutdatedCaches: true,
       maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-      navigateFallback: null,
+      // Cache Iconify API (provider/brand icons) so previously used
+      // icons keep rendering offline. Search JSON + SVG endpoints.
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/api\.iconify\.design\/.*/i,
+          handler: "CacheFirst",
+          options: {
+            cacheName: "iconify-api",
+            expiration: {
+              maxEntries: 500,
+              maxAgeSeconds: 60 * 60 * 24 * 30,
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+      ],
     },
     injectManifest: {
-      globPatterns: ["**/*.{js,css,png,svg,ico,woff2}"],
+      globPatterns: ["**/*.{js,css,html,png,svg,ico,woff2,json,webmanifest}"],
     },
     client: {
       installPrompt: true,
     },
     devOptions: {
-      enabled: false,
+      enabled: true,
       suppressWarnings: true,
       type: "module",
     },
   },
   compatibilityDate: "2025-07-15",
   nitro: {
+    prerender: {
+      routes: ["/"],
+      crawlLinks: false,
+    },
     // Default to node-server locally. For Cloudflare Workers/Pages deployment
     // set NITRO_PRESET=cloudflare_module (or cloudflare_pages). `ioredis` is
     // Node-TCP only and pulls `node:string_decoder` / `node:net` which unenv

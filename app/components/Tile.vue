@@ -3,7 +3,7 @@ import * as OTPAuth from "otpauth";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import Edit from "./Edit.vue";
 import Share from "./Share.vue";
-import { ensureOnline } from "~/utils/offline";
+import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 import { deleteCachedAccount } from "~/utils/cache";
 
 const overlay = useOverlay();
@@ -95,13 +95,13 @@ const deleteAccount = async () => {
     })
     .catch(async (err) => {
       toast.update(toastId, {
-        message: err?.data?.message ?? String(err),
+        message: getWriteErrorMessage(err, "delete this authenticator"),
         type: "error",
       });
       if (accountsData.value) {
         accountsData.value = prevSnapshot;
       }
-      await refreshNuxtData("accounts");
+      if (onlineNow()) await refreshNuxtData("accounts");
     });
 };
 

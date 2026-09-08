@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { getCache, cacheAccountsFromServer } from "~/utils/cache";
-import { onlineNow } from "~/utils/offline";
+import { isNetworkError, onlineNow } from "~/utils/offline";
 import BackgroundPattern from "~/components/BackgroundPattern.vue";
 import AppNavbar from "~/components/AppNavbar.vue";
 import BottomBar from "~/components/BottomBar.vue";
@@ -24,19 +24,21 @@ const { data: cipherData, status } = await useAsyncData<CipherAccount[]>("accoun
   }
   try {
     const meta = await $fetch<{ version: number; updatedAt: string; count: number; order?: string[] }>("/api/accounts/meta");
-    if (cached && cached.version === meta.version && Object.keys(cached.map).length === meta.count) {
-      setOfflineState(false);
-      return sortByOrder(Object.values(cached.map) as CipherAccount[], meta.order ?? cached.order);
-    }
+    // Server-first: always fetch fresh accounts while online and replace local cache.
     const fresh = await $fetch<CipherAccount[]>("/api/accounts");
     const order = Array.isArray(meta.order) && meta.order.length ? meta.order : undefined;
     await cacheAccountsFromServer(fresh, { version: meta.version, updatedAt: meta.updatedAt }, order);
     setOfflineState(false);
     return sortByOrder(fresh, order);
-  } catch {
-    setOfflineState(true);
-    if (cached && Object.keys(cached.map).length) return sortByOrder(Object.values(cached.map) as CipherAccount[], cached.order);
-    return [] as CipherAccount[];
+  } catch (e: any) {
+    // Only fall back to cache on true offline/transport failures, not HTTP 401/500.
+    if (isNetworkError(e) || !onlineNow()) {
+      setOfflineState(true);
+      if (cached && Object.keys(cached.map).length) return sortByOrder(Object.values(cached.map) as CipherAccount[], cached.order);
+      return [] as CipherAccount[];
+    }
+    // Surface HTTP errors (e.g. 401 session expiry) without masking with stale cache.
+    throw e;
   }
 }, { server: false, default: () => [] as CipherAccount[] });
 

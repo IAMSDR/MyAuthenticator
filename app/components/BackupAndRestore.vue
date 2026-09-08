@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AdaptiveModal from "./AdaptiveModal.vue";
 import { toast } from "@steveyuowo/vue-hot-toast";
-import { ensureOnline } from "~/utils/offline";
+import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
 const emit = defineEmits(["close"]);
 
@@ -194,14 +194,14 @@ const restoreFromEncryptedBackupFile = async () => {
     })
     .catch(async (err) => {
       toast.update(toastId, {
-        message: err?.data?.message ?? String(err),
+        message: getWriteErrorMessage(err, "restore"),
         type: "error",
       });
       const addedIds = new Set(cipher.map((c) => c.id));
       if (accountsData.value) {
         accountsData.value = accountsData.value.filter((a) => !addedIds.has(a.id));
       }
-      await refreshNuxtData("accounts");
+      if (onlineNow()) await refreshNuxtData("accounts");
       console.error(err);
     });
 };
@@ -271,14 +271,14 @@ const restoreFromUriListFile = async () => {
     })
     .catch(async (err) => {
       toast.update(toastId, {
-        message: err?.data?.message ?? String(err),
+        message: getWriteErrorMessage(err, "restore"),
         type: "error",
       });
       const addedIds = new Set(cipher.map((c) => c.id));
       if (accountsData.value) {
         accountsData.value = accountsData.value.filter((a) => !addedIds.has(a.id));
       }
-      await refreshNuxtData("accounts");
+      if (onlineNow()) await refreshNuxtData("accounts");
       console.error(err);
     });
 };

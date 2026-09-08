@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AdaptiveModal from "./AdaptiveModal.vue";
 import { toast } from "@steveyuowo/vue-hot-toast";
-import { ensureOnline } from "~/utils/offline";
+import { ensureOnline, getWriteErrorMessage } from "~/utils/offline";
 
 const oldPassword = ref("");
 const newPassword = ref("");
@@ -48,7 +48,7 @@ const onSubmit = async () => {
     toast.update(id, { message: "Password changed successfully", type: "success" });
     emit("close");
   } catch (e: any) {
-    toast.update(id, { message: e?.data?.message ?? String(e), type: "error" });
+    toast.update(id, { message: getWriteErrorMessage(e, "change password"), type: "error" });
   } finally {
     loading.value = false;
   }

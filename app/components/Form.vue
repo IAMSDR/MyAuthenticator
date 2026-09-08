@@ -2,7 +2,7 @@
 import AdaptiveModal from "./AdaptiveModal.vue";
 import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
 import { toast } from "@steveyuowo/vue-hot-toast";
-import { ensureOnline } from "~/utils/offline";
+import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
 const emit = defineEmits(["close"]);
 
@@ -88,14 +88,14 @@ async function addAccount(event: FormSubmitEvent<Account>) {
     })
     .catch(async (err) => {
       toast.update(toastid, {
-        message: err?.data?.message ?? String(err),
+        message: getWriteErrorMessage(err, "save this authenticator"),
         type: "error",
       });
       // Rollback on failure
       if (accountsData.value) {
         accountsData.value = accountsData.value.filter((a) => a.id !== cipherAccount.id);
       }
-      await refreshNuxtData("accounts");
+      if (onlineNow()) await refreshNuxtData("accounts");
       console.error(err);
     });
 }
