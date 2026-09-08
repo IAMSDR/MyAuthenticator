@@ -7,6 +7,16 @@ const addModal = overlay.create(Add);
 const menuModal = overlay.create(Menu);
 
 const showSearchBar = useState("searchBar", () => false);
+const searchQuery = useState("searchQuery", () => "");
+
+const toggleSearch = () => {
+  if (showSearchBar.value) {
+    showSearchBar.value = false;
+    searchQuery.value = "";
+  } else {
+    showSearchBar.value = true;
+  }
+};
 </script>
 
 <template>
@@ -75,7 +85,7 @@ const showSearchBar = useState("searchBar", () => false);
               ? 'bg-(--ui-primary)/15 text-(--ui-primary)'
               : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-black/[0.06] dark:hover:bg-white/[0.1]',
           ]"
-          @click="showSearchBar = !showSearchBar"
+          @click="toggleSearch"
         >
           <UIcon
             :name="showSearchBar ? 'i-lucide-x' : 'i-lucide-search'"
