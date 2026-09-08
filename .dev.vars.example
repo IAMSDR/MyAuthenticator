@@ -1,0 +1,6 @@
+# Session encryption — minimum 32 characters (generate with `openssl rand -hex 32`)
+NUXT_SESSION_PASSWORD="your-32-char-super-long-secret-for-session-encryption"
+
+# Upstash Redis REST credentials (from https://console.upstash.com)
+UPSTASH_REDIS_REST_URL="https://your-upstash-url.upstash.io"
+UPSTASH_REDIS_REST_TOKEN="your-upstash-token"

@@ -10,7 +10,21 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "db:generate": "echo \"removed drizzle\""
+    "build:cloudflare": "NITRO_PRESET=cloudflare_module nuxt build",
+    "deploy": "wrangler deploy"
+  },
+  "cloudflare": {
+    "bindings": {
+      "NUXT_SESSION_PASSWORD": {
+        "description": "Session encryption key (>=32 chars). Generate with: openssl rand -hex 32"
+      },
+      "UPSTASH_REDIS_REST_URL": {
+        "description": "Upstash Redis REST URL (e.g. https://...upstash.io)"
+      },
+      "UPSTASH_REDIS_REST_TOKEN": {
+        "description": "Upstash Redis REST Token"
+      }
+    }
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.128",
