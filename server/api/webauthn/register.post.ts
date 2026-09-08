@@ -1,31 +1,53 @@
 export default defineWebAuthnRegisterEventHandler({
   async storeChallenge(event, challenge, attemptId) {
-    await hubKV().set(`auth:challenge:${attemptId}`, challenge, { ttl: 60 });
+    const redis = await getRedis();
+    await redis.set(challengeKey(attemptId), challenge, { ex: 60 });
   },
-  async getChallenge(event, attemptId) {
-    const challenge = await hubKV().get<string>(`auth:challenge:${attemptId}`);
+  async getChallenge(_event, attemptId) {
+    const redis = await getRedis();
+    const challenge = await redis.getdel(challengeKey(attemptId));
     if (!challenge) {
       throw createError({
         statusCode: 400,
         message: "Challenge not found or expired",
       });
     }
-    await hubKV().del(`auth:challenge:${attemptId}`);
     return challenge;
+  },
+  // @ts-expect-error simplewebauthn v13 PRF client extension typing
+  async getOptions(_event) {
+    const redis = await getRedis();
+    const prfSalt = await redis.get(redisKeys.prfSalt);
+    if (prfSalt) {
+      const b64 = prfSalt.replace(/-/g, "+").replace(/_/g, "/");
+      const prfBytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
+      return {
+        extensions: {
+          prf: {
+            eval: {
+              first: prfBytes,
+            },
+          },
+        },
+      };
+    }
+    return {};
   },
   validateUser: (user) => passkeyUser.parseAsync(user),
   async onSuccess(event, { user, credential }) {
-    const db = useDrizzle();
-    const isDeviceExists = await db.query.credentials.findFirst({
-      where: eq(tables.credentials.displayName, user.displayName),
-    });
-    if (isDeviceExists) {
+    const redis = await getRedis();
+    // Check if device already registered by id in Hash
+    const exists = redis.hexists
+      ? (await redis.hexists(redisKeys.passkeys, credential.id)) === 1
+      : (await redis.hget(redisKeys.passkeys, credential.id)) !== null;
+    if (exists) {
       throw createError({
         statusCode: 409,
         message: "Device already registered",
       });
     }
-    await db.insert(tables.credentials).values({
+
+    const passkeyData = {
       displayName: user.displayName,
       user: user.userName,
       id: credential.id,
@@ -33,6 +55,10 @@ export default defineWebAuthnRegisterEventHandler({
       counter: credential.counter,
       backedUp: credential.backedUp,
       transports: credential.transports,
-    });
+      createdAt: new Date().toISOString(),
+    };
+
+    // Store in Redis Hash atomically by credential ID
+    await redis.hset(redisKeys.passkeys, credential.id, JSON.stringify(passkeyData));
   },
 });

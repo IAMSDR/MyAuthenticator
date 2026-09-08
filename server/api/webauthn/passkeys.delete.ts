@@ -1,13 +1,11 @@
 export default eventHandler(async (event) => {
-  const session = await requireUserSession(event);
+  await requireUserSession(event);
   const query = getQuery(event);
-  if (!query.id)
-    throw createError({ statusCode: 400, message: "Validation Failed !!" });
-  const passkey = await useDrizzle()
-    .delete(tables.credentials)
-    .where(and(eq(tables.credentials.id, String(query.id))));
-  return {
-    status: 200,
-    message: "Deleted successfully",
-  };
+  if (!query.id) throw createError({ statusCode: 400, message: "Validation Failed" });
+  const redis = await getRedis();
+  const id = String(query.id);
+  await redis.hdel(redisKeys.passkeys, id);
+  // also delete PRF wrapper if exists
+  await redis.del(dekPrfKey(id));
+  return { status: 200, message: "Deleted successfully" };
 });

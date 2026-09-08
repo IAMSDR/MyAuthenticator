@@ -1,35 +1,48 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  ssr: false,
   devtools: { enabled: false },
   modules: [
     "@nuxt/ui",
     "@nuxt/eslint",
     "@vueuse/nuxt",
-    "@nuxthub/core",
     "nuxt-auth-utils",
     "@vite-pwa/nuxt",
   ],
   css: ["~/assets/css/main.css"],
   icon: {
-    serverBundle: "remote",
-    localApiEndpoint: "/_nuxt_icon/:collection",
+    serverBundle: "local",
+    clientBundle: {
+      scan: true,
+      sizeLimitKb: 512,
+    },
+    fallbackToApi: true,
+    iconifyApiEndpoint: "https://api.iconify.design",
   },
   runtimeConfig: {
-    AUTH_USERNAME: "",
-    AUTH_PASSWORD: "",
-    DB_ENCRYPTION_PASSWORD: "",
+    session: {
+      password: "",
+    },
+    upstashRedisRestUrl: "",
+    upstashRedisRestToken: "",
+    redisUrl: "",
+  },
+  devServer: {
+    host: "0.0.0.0",
+  },
+  vite: {
+    server: {
+      allowedHosts: ["temp.iamsdr.in"],
+    },
   },
   future: {
     compatibilityVersion: 4,
-  },
-  hub: {
-    database: true,
-    kv: true,
   },
   auth: {
     webAuthn: true,
   },
   pwa: {
+    registerType: "autoUpdate",
     includeAssets: ["favicon.ico", "favicon-16x16.png"],
     manifest: {
       name: "MyAuthenticator",
@@ -50,11 +63,32 @@ export default defineNuxtConfig({
       ],
     },
     workbox: {
-      globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
+      navigateFallback: "/",
+      navigateFallbackDenylist: [/^\/api/],
+      globPatterns: ["**/*.{js,css,html,png,svg,ico,woff2,json,webmanifest}"],
+      cleanupOutdatedCaches: true,
       maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      // Cache Iconify API (provider/brand icons) so previously used
+      // icons keep rendering offline. Search JSON + SVG endpoints.
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/api\.iconify\.design\/.*/i,
+          handler: "CacheFirst",
+          options: {
+            cacheName: "iconify-api",
+            expiration: {
+              maxEntries: 500,
+              maxAgeSeconds: 60 * 60 * 24 * 30,
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+      ],
     },
     injectManifest: {
-      globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
+      globPatterns: ["**/*.{js,css,html,png,svg,ico,woff2,json,webmanifest}"],
     },
     client: {
       installPrompt: true,
@@ -62,10 +96,27 @@ export default defineNuxtConfig({
     devOptions: {
       enabled: true,
       suppressWarnings: true,
-      navigateFallback: "/",
-      navigateFallbackAllowlist: [/^\/$/],
       type: "module",
     },
   },
-  compatibilityDate: "2025-03-15",
+  compatibilityDate: "2025-07-15",
+  nitro: {
+    prerender: {
+      routes: ["/"],
+      crawlLinks: false,
+    },
+    // Default to node-server locally. For Cloudflare Workers/Pages deployment
+    // set NITRO_PRESET=cloudflare_module (or cloudflare_pages). `ioredis` is
+    // Node-TCP only and pulls `node:string_decoder` / `node:net` which unenv
+    // cannot polyfill ("StringDecoder is not implemented yet"). We alias it to
+    // a local empty mock for cloudflare builds and lazy-load it in
+    // server/utils/redis.ts.
+    preset: process.env.NITRO_PRESET || undefined,
+    alias:
+      process.env.NITRO_PRESET?.includes("cloudflare")
+        ? {
+            ioredis: "./server/mocks/ioredis-empty.ts",
+          }
+        : {},
+  },
 });

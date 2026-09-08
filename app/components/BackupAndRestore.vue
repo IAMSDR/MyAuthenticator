@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import AdaptiveModal from "./AdaptiveModal.vue";
 import { toast } from "@steveyuowo/vue-hot-toast";
+import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
 const emit = defineEmits(["close"]);
 
@@ -12,7 +14,7 @@ const file = ref<HTMLInputElement | null>(null);
 const loading = ref(false);
 
 const handleChosen = (val: number) => {
-  if (chosen.value > 0 && val == chosen.value) chosen.value = 0;
+  if (chosen.value > 0 && val === chosen.value) chosen.value = 0;
   else chosen.value = val;
   password.value = "";
   if (file.value) file.value.value = "";
@@ -22,16 +24,31 @@ const handleChosen = (val: number) => {
 const downloadEncryptedBackupFile = async () => {
   const toastId = toast.loading("Downloading...");
   loading.value = true;
-  const accounts = useNuxtData<Accounts>("accounts");
-  if (!accounts.data.value?.length) {
+  const raw = useNuxtData<CipherAccount[]>("accounts");
+  if (!raw.data.value?.length) {
     toast.update(toastId, {
       message: "No accounts to backup",
       type: "error",
     });
+    loading.value = false;
+    return;
+  }
+  const { dek, decryptAccounts } = useEncryption();
+  if (!dek.value) {
+    toast.update(toastId, { message: "Vault locked", type: "error" });
+    loading.value = false;
+    return;
+  }
+  let plain: Accounts = [];
+  try {
+    plain = await decryptAccounts(raw.data.value as CipherAccount[]);
+  } catch {
+    toast.update(toastId, { message: "Failed to decrypt accounts", type: "error" });
+    loading.value = false;
     return;
   }
   const encryptedAccounts = await encryptWithPassword(
-    JSON.stringify(accounts.data.value),
+    JSON.stringify(plain),
     password.value
   );
   try {
@@ -51,7 +68,7 @@ const downloadEncryptedBackupFile = async () => {
       message: "Download failed",
       type: "error",
     });
-    console.error("Error downloading URI list file:", error);
+    console.error("Error downloading backup file:", error);
   }
   loading.value = false;
 };
@@ -59,15 +76,30 @@ const downloadEncryptedBackupFile = async () => {
 const downloadUriListFile = async () => {
   const toastId = toast.loading("Downloading...");
   loading.value = true;
-  const accounts = useNuxtData<Accounts>("accounts");
-  if (!accounts.data.value?.length) {
+  const raw = useNuxtData<CipherAccount[]>("accounts");
+  if (!raw.data.value?.length) {
     toast.update(toastId, {
       message: "No accounts to backup",
       type: "error",
     });
+    loading.value = false;
     return;
   }
-  const accountsUriList = await getAccountsUriList(accounts.data.value);
+  const { dek, decryptAccounts } = useEncryption();
+  if (!dek.value) {
+    toast.update(toastId, { message: "Vault locked", type: "error" });
+    loading.value = false;
+    return;
+  }
+  let plain: Accounts = [];
+  try {
+    plain = await decryptAccounts(raw.data.value as CipherAccount[]);
+  } catch {
+    toast.update(toastId, { message: "Failed to decrypt accounts", type: "error" });
+    loading.value = false;
+    return;
+  }
+  const accountsUriList = await getAccountsUriList(plain);
   try {
     const blob = new Blob([accountsUriList.join("\n")], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -91,24 +123,25 @@ const downloadUriListFile = async () => {
 };
 
 const restoreFromEncryptedBackupFile = async () => {
-  const toastId = toast.loading("Restoring...");
-  loading.value = true;
+  if (!ensureOnline("restore")) return;
   if (!file.value?.files?.[0]) {
-    toast.update(toastId, {
-      message: "No file selected",
-      type: "error",
-    });
+    toast.error("No file selected");
     return;
   }
+  const toastId = toast.loading("Restoring...");
+  loading.value = true;
   const fileContent = await readFileContent(file.value.files[0]);
   let accounts: Accounts = [];
-  await decryptWithPassword(fileContent, password.value)
-    .then((data) => {
-      accounts = JSON.parse(data) as Accounts;
-    })
-    .catch((error) => {
-      console.error("Error decrypting file:", error);
-    });
+  try {
+    const decrypted = await decryptWithPassword(fileContent, password.value);
+    const parsed = JSON.parse(decrypted);
+    const validated = accountsSchema.safeParse(parsed);
+    if (validated.success) {
+      accounts = validated.data;
+    }
+  } catch (error) {
+    console.error("Error decrypting file:", error);
+  }
   if (!accounts.length) {
     toast.update(toastId, {
       message: "Invalid file or password",
@@ -117,43 +150,79 @@ const restoreFromEncryptedBackupFile = async () => {
     loading.value = false;
     return;
   }
-  // removing feild 'id' if exists
-  accounts = accounts.map(({ ["id"]: _, ...remain }) => remain);
-  await $fetch("/api/accounts", {
+  const { dek } = useEncryption();
+  if (!dek.value) {
+    toast.update(toastId, { message: "Vault locked", type: "error" });
+    loading.value = false;
+    return;
+  }
+  const now = new Date().toISOString();
+  let cipher: CipherAccount[] = [];
+  try {
+    cipher = await Promise.all(
+      accounts.map(async (acc) => {
+        const { id: _o, ...remain } = acc as Account & { id?: string };
+        const s = await encryptWithKey(remain.secret, dek.value!);
+        return {
+          ...remain,
+          id: crypto.randomUUID(),
+          secret: s,
+          createdAt: now,
+        } as CipherAccount;
+      })
+    );
+  } catch {
+    toast.update(toastId, { message: "Encryption failed", type: "error" });
+    loading.value = false;
+    return;
+  }
+
+  const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
+  if (accountsData.value) {
+    accountsData.value = [...cipher, ...accountsData.value];
+  }
+
+  emit("close");
+  loading.value = false;
+
+  $fetch<{ status: number; message: string; version: number }>("/api/accounts", {
     method: "POST",
-    body: accounts,
+    body: cipher,
   })
     .then(async (res) => {
       toast.update(toastId, {
-        message: res.message,
+        message: res.message || "Restored successfully",
         type: "success",
       });
-      await refreshNuxtData("accounts");
-      emit("close");
+      await upsertCachedAccounts(cipher, res.version, now);
     })
-    .catch((err) => {
+    .catch(async (err) => {
       toast.update(toastId, {
-        message: err?.data?.message ?? err,
+        message: getWriteErrorMessage(err, "restore"),
         type: "error",
       });
+      const addedIds = new Set(cipher.map((c) => c.id));
+      if (accountsData.value) {
+        accountsData.value = accountsData.value.filter((a) => !addedIds.has(a.id));
+      }
+      if (onlineNow()) await refreshNuxtData("accounts");
       console.error(err);
     });
-  loading.value = false;
 };
 
 const restoreFromUriListFile = async () => {
-  const toastId = toast.loading("Restoring...");
-  loading.value = true;
+  if (!ensureOnline("restore")) return;
   if (!file.value?.files?.[0]) {
-    toast.update(toastId, {
-      message: "No file selected",
-      type: "error",
-    });
+    toast.error("No file selected");
     return;
   }
+  const toastId = toast.loading("Restoring...");
+  loading.value = true;
   const fileContent = await readFileContent(file.value.files[0]);
-  const accounts = await extractAccountsFromUriList(fileContent.split("\n"));
-  if (!accounts?.length) {
+  const rawAccounts = await extractAccountsFromUriList(fileContent.split("\n"));
+  const validated = accountsSchema.safeParse(rawAccounts);
+  const accounts = validated.success ? validated.data : [];
+  if (!accounts.length) {
     toast.update(toastId, {
       message: "Invalid file",
       type: "error",
@@ -161,204 +230,238 @@ const restoreFromUriListFile = async () => {
     loading.value = false;
     return;
   }
-  await $fetch("/api/accounts", {
+  const { dek } = useEncryption();
+  if (!dek.value) {
+    toast.update(toastId, { message: "Vault locked", type: "error" });
+    loading.value = false;
+    return;
+  }
+  const now = new Date().toISOString();
+  let cipher: CipherAccount[] = [];
+  try {
+    cipher = await Promise.all(
+      accounts.map(async (acc) => {
+        const s = await encryptWithKey(acc.secret, dek.value!);
+        return {
+          ...acc,
+          id: crypto.randomUUID(),
+          secret: s,
+          createdAt: now,
+        } as CipherAccount;
+      })
+    );
+  } catch {
+    toast.update(toastId, { message: "Encryption failed", type: "error" });
+    loading.value = false;
+    return;
+  }
+
+  const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
+  if (accountsData.value) {
+    accountsData.value = [...cipher, ...accountsData.value];
+  }
+
+  emit("close");
+  loading.value = false;
+
+  $fetch<{ status: number; message: string; version: number }>("/api/accounts", {
     method: "POST",
-    body: accounts,
+    body: cipher,
   })
     .then(async (res) => {
       toast.update(toastId, {
-        message: res.message,
+        message: res.message || "Restored successfully",
         type: "success",
       });
-      await refreshNuxtData("accounts");
-      emit("close");
+      await upsertCachedAccounts(cipher, res.version, now);
     })
-    .catch((err) => {
+    .catch(async (err) => {
       toast.update(toastId, {
-        message: err?.data?.message ?? err,
+        message: getWriteErrorMessage(err, "restore"),
         type: "error",
       });
+      const addedIds = new Set(cipher.map((c) => c.id));
+      if (accountsData.value) {
+        accountsData.value = accountsData.value.filter((a) => !addedIds.has(a.id));
+      }
+      if (onlineNow()) await refreshNuxtData("accounts");
       console.error(err);
     });
-  loading.value = false;
 };
 </script>
 
 <template>
-  <UModal
+  <AdaptiveModal
     title="Backup & Restore"
-    :ui="{ close: 'top-2 start-6 end-auto' }"
-    close-icon="i-lucide-arrow-left"
-    :dismissible="false"
+    description="Export or import your encrypted authenticators"
   >
     <template #body>
-      <div class="flex-col flex space-y-3">
-        <UButton
-          block
-          icon="i-hugeicons-encrypt"
-          :variant="chosen == 1 ? 'ghost' : 'soft'"
-          color="primary"
-          class="py-2 gap-x-3"
-          label="Backup to Encrypted file"
-          :class="
-            chosen == 1
-              ? 'border-b rounded-none border-dashed border-neutral-300 dark:border-neutral-600 uppercase'
-              : ''
-          "
-          @click="handleChosen(1)"
-        />
-        <div v-show="chosen == 1" class="p-2">
-          <p class="text-xs text-center leading-4.5">
-            This will save all your authenticators, including icons, to an
-            encrypted file protected by a password (recommended).
-          </p>
-          <form
-            class="flex-center space-x-4 px-5 my-3"
-            @submit.prevent="downloadEncryptedBackupFile"
+      <div class="space-y-3">
+        <!-- Option 1: Backup Encrypted -->
+        <div class="rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden transition-colors">
+          <button
+            class="w-full flex items-center justify-between p-3.5 bg-neutral-50/50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+            @click="handleChosen(1)"
           >
-            <UInput
-              color="primary"
-              variant="outline"
-              placeholder="Password"
-              required
-              minlength="8"
-              v-model="password"
+            <div class="flex items-center gap-3">
+              <UIcon name="i-lucide-shield-check" class="size-5 text-(--ui-primary)" />
+              <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Export Encrypted Backup</span>
+            </div>
+            <UIcon
+              name="i-lucide-chevron-down"
+              class="size-4 text-neutral-400 transition-transform duration-200"
+              :class="chosen === 1 ? 'rotate-180' : ''"
             />
-            <UButton
-              color="primary"
-              variant="soft"
-              icon="i-hugeicons-encrypt"
-              size="sm"
-              type="submit"
-              >Encrypt</UButton
-            >
-          </form>
-        </div>
-        <UButton
-          block
-          icon="i-prime-list"
-          :variant="chosen == 2 ? 'ghost' : 'soft'"
-          color="primary"
-          class="py-2 gap-x-3"
-          label="Backup to URi list file"
-          :class="
-            chosen == 2
-              ? 'border-b rounded-none border-dashed border-neutral-300 dark:border-neutral-600 uppercase'
-              : ''
-          "
-          @click="handleChosen(2)"
-        />
-        <div v-show="chosen == 2" class="p-2 flex-center flex-col space-y-3">
-          <p class="text-xs text-center leading-4.5">
-            This will save all your authenticators to an unencrypted plaintext
-            URI list file. Note that icons won't be included.This method is not
-            recommended as your keys might be exposed.
-          </p>
-          <UButton
-            color="primary"
-            variant="soft"
-            icon="i-charm-download"
-            size="sm"
-            @click="downloadUriListFile"
-            >Download</UButton
-          >
-        </div>
-        <USeparator label="OR" />
-        <UButton
-          block
-          icon="i-hugeicons-encrypt"
-          :variant="chosen == 3 ? 'ghost' : 'soft'"
-          color="primary"
-          class="py-2 gap-x-3"
-          label="Restore from Encrypted file"
-          :class="
-            chosen == 3
-              ? 'border-b rounded-none border-dashed border-neutral-300 dark:border-neutral-600 uppercase'
-              : ''
-          "
-          @click="handleChosen(3)"
-        />
-        <div v-show="chosen == 3" class="p-2">
-          <p class="text-xs text-center leading-4.5">
-            Select a file to restore your authenticators from an encrypted
-            backup file.
-          </p>
-          <form
-            class="px-5 my-3 flex flex-col space-y-3"
-            @submit.prevent="restoreFromEncryptedBackupFile"
-          >
-            <UInput
-              color="primary"
-              variant="outline"
-              type="file"
-              required
-              class="w-full"
-              @change="file = $event.target as HTMLInputElement"
-            />
-            <div class="flex-center space-x-4">
+          </button>
+          <div v-show="chosen === 1" class="p-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3 bg-white dark:bg-neutral-950">
+            <p class="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+              Saves all your authenticators into a password-protected backup file (AES-GCM).
+            </p>
+            <form class="flex gap-2" @submit.prevent="downloadEncryptedBackupFile">
               <UInput
-                color="primary"
-                variant="outline"
-                placeholder="Password"
+                v-model="password"
+                placeholder="Backup password (min 8 chars)"
+                type="password"
                 required
                 minlength="8"
-                v-model="password"
+                size="md"
+                class="flex-1"
+                :ui="{ base: 'h-10' }"
               />
               <UButton
-                color="primary"
-                variant="soft"
-                icon="i-hugeicons-encrypt"
-                size="sm"
                 type="submit"
+                size="md"
+                class="h-10 cursor-pointer px-4"
                 :disabled="loading"
-                >Decrypt</UButton
-              >
-            </div>
-          </form>
+                :loading="loading"
+              >Download</UButton>
+            </form>
+          </div>
         </div>
-        <UButton
-          block
-          icon="i-prime-list"
-          :variant="chosen == 4 ? 'ghost' : 'soft'"
-          color="primary"
-          class="py-2 gap-x-3"
-          label="Restore from URi list file"
-          :class="
-            chosen == 4
-              ? 'border-b rounded-none border-dashed border-neutral-300 dark:border-neutral-600 uppercase'
-              : ''
-          "
-          @click="handleChosen(4)"
-        />
-        <div v-show="chosen == 4" class="p-2">
-          <p class="text-xs text-center leading-4.5">
-            Choose a file to restore your authenticators from an unencrypted
-            plaintext URI list file.
-          </p>
-          <form
-            class="flex-center space-x-4 px-5 my-3"
-            @submit.prevent="restoreFromUriListFile"
+
+        <!-- Option 2: Backup Plain URIs -->
+        <div class="rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden transition-colors">
+          <button
+            class="w-full flex items-center justify-between p-3.5 bg-neutral-50/50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+            @click="handleChosen(2)"
           >
-            <UInput
-              color="primary"
-              variant="outline"
-              placeholder="Password"
-              type="file"
-              required
-              @change="file = $event.target as HTMLInputElement"
+            <div class="flex items-center gap-3">
+              <UIcon name="i-lucide-file-text" class="size-5 text-(--ui-primary)" />
+              <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Export Plain URI List</span>
+            </div>
+            <UIcon
+              name="i-lucide-chevron-down"
+              class="size-4 text-neutral-400 transition-transform duration-200"
+              :class="chosen === 2 ? 'rotate-180' : ''"
             />
+          </button>
+          <div v-show="chosen === 2" class="p-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3 bg-white dark:bg-neutral-950">
+            <p class="text-xs text-amber-600 dark:text-amber-400 leading-relaxed">
+              Caution: Exporting plain URIs will expose secret keys in unencrypted text format.
+            </p>
             <UButton
-              color="primary"
               variant="soft"
-              icon="i-tabler-restore"
-              size="sm"
+              color="neutral"
+              size="md"
+              block
+              class="h-10 cursor-pointer"
               :disabled="loading"
-              type="submit"
-              >Restore</UButton
-            >
-          </form>
+              @click="downloadUriListFile"
+            >Download URIs (.txt)</UButton>
+          </div>
+        </div>
+
+        <USeparator label="or import" class="my-1" />
+
+        <!-- Option 3: Restore Encrypted -->
+        <div class="rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden transition-colors">
+          <button
+            class="w-full flex items-center justify-between p-3.5 bg-neutral-50/50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+            @click="handleChosen(3)"
+          >
+            <div class="flex items-center gap-3">
+              <UIcon name="i-lucide-shield-check" class="size-5 text-neutral-600 dark:text-neutral-400" />
+              <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Restore Encrypted Backup</span>
+            </div>
+            <UIcon
+              name="i-lucide-chevron-down"
+              class="size-4 text-neutral-400 transition-transform duration-200"
+              :class="chosen === 3 ? 'rotate-180' : ''"
+            />
+          </button>
+          <div v-show="chosen === 3" class="p-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3 bg-white dark:bg-neutral-950">
+            <form class="space-y-3" @submit.prevent="restoreFromEncryptedBackupFile">
+              <UFormField label="Backup file (.backup)">
+                <input
+                  type="file"
+                  required
+                  class="w-full text-xs text-neutral-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-neutral-100 dark:file:bg-neutral-800 file:text-neutral-900 dark:file:text-neutral-100 hover:file:bg-neutral-200 cursor-pointer"
+                  @change="file = ($event.target as HTMLInputElement)"
+                />
+              </UFormField>
+              <div class="flex gap-2">
+                <UInput
+                  v-model="password"
+                  placeholder="Backup password"
+                  type="password"
+                  required
+                  minlength="8"
+                  size="md"
+                  class="flex-1"
+                  :ui="{ base: 'h-10' }"
+                />
+                <UButton
+                  type="submit"
+                  size="md"
+                  class="h-10 cursor-pointer px-4"
+                  :disabled="loading"
+                  :loading="loading"
+                >Restore</UButton>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Option 4: Restore URIs -->
+        <div class="rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden transition-colors">
+          <button
+            class="w-full flex items-center justify-between p-3.5 bg-neutral-50/50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left transition-colors cursor-pointer"
+            @click="handleChosen(4)"
+          >
+            <div class="flex items-center gap-3">
+              <UIcon name="i-lucide-file-up" class="size-5 text-neutral-600 dark:text-neutral-400" />
+              <span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Restore from URI Text File</span>
+            </div>
+            <UIcon
+              name="i-lucide-chevron-down"
+              class="size-4 text-neutral-400 transition-transform duration-200"
+              :class="chosen === 4 ? 'rotate-180' : ''"
+            />
+          </button>
+          <div v-show="chosen === 4" class="p-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3 bg-white dark:bg-neutral-950">
+            <form class="space-y-3" @submit.prevent="restoreFromUriListFile">
+              <UFormField label="URI list file (.txt)">
+                <input
+                  type="file"
+                  required
+                  class="w-full text-xs text-neutral-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-neutral-100 dark:file:bg-neutral-800 file:text-neutral-900 dark:file:text-neutral-100 hover:file:bg-neutral-200 cursor-pointer"
+                  @change="file = ($event.target as HTMLInputElement)"
+                />
+              </UFormField>
+              <UButton
+                type="submit"
+                size="md"
+                block
+                class="h-10 cursor-pointer"
+                :disabled="loading"
+                :loading="loading"
+              >Import URIs</UButton>
+            </form>
+          </div>
         </div>
       </div>
     </template>
-  </UModal>
+  </AdaptiveModal>
 </template>
+
+

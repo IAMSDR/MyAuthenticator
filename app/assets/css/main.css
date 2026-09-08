@@ -1,20 +1,8 @@
-@import "tailwindcss" theme(static);
+@import "tailwindcss";
 @import "@nuxt/ui";
 
 @theme {
-  /* --color-primary-50: var(--ui-color-primary-50);
-  --color-primary-100: var(--ui-color-primary-100);
-  --color-primary-200: var(--ui-color-primary-200);
-  --color-primary-300: var(--ui-color-primary-300);
-  --color-primary-400: var(--ui-color-primary-400);
-  --color-primary-500: var(--ui-color-primary-500);
-  --color-primary-600: var(--ui-color-primary-600);
-  --color-primary-700: var(--ui-color-primary-700);
-  --color-primary-800: var(--ui-color-primary-800);
-  --color-primary-900: var(--ui-color-primary-900);
-  --color-primary-950: var(--ui-color-primary-950); */
-
-  /* --font-sans: "Public Sans", sans-serif; */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 ::-webkit-scrollbar {
@@ -22,48 +10,73 @@
   display: none;
 }
 
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 body {
-  @apply bg-neutral-100 dark:bg-neutral-950 font-sans transition-transform ease-in-out duration-300;
+  @apply bg-white dark:bg-neutral-950 font-sans text-neutral-900 dark:text-neutral-100 antialiased;
 }
 
 .flex-center {
   @apply flex justify-center items-center;
 }
 
+/* toast styling */
 .VueHotToast__toast {
-  @apply !p-1.5 !font-medium;
+  @apply !text-sm !p-2 !rounded-md !shadow-md;
 }
 
+/* slide transitions */
 .slide-enter-active,
-.slide2-enter-active,
 .slide-leave-active,
+.slide2-enter-active,
 .slide2-leave-active {
-  @apply transition-transform duration-500 ease-in-out;
+  @apply transition-all duration-300 ease-in-out;
 }
 
 .slide-enter-from,
-.slide2-enter-from,
 .slide-leave-to {
-  @apply translate-x-80;
+  @apply opacity-0 translate-x-10;
 }
-.slide2-leave-to {
-  @apply -translate-x-80;
-}
+
 .slide-enter-to,
-.slide2-enter-to,
 .slide-leave-from {
-  @apply translate-x-0;
+  @apply opacity-100 translate-x-0;
 }
+
+.slide2-enter-from {
+  @apply opacity-0 translate-x-6;
+}
+
+.slide2-enter-to {
+  @apply opacity-100 translate-x-0;
+}
+
 .slide2-leave-from {
-  @apply -translate-x-0;
+  @apply opacity-100 translate-x-0;
+}
+
+.slide2-leave-to {
+  @apply opacity-0 -translate-x-6;
 }
 
 .slidey-enter-active,
 .slidey-leave-active {
-  @apply transition-all duration-500 ease-in-out;
+  @apply transition-all duration-300 ease-in-out;
 }
 
 .slidey-enter-from,
 .slidey-leave-to {
-  @apply opacity-0 -translate-y-10 scale-75;
+  @apply opacity-0 -translate-y-4;
 }
+
+/* focus ring */
+*:focus-visible {
+  @apply outline-none ring-2 ring-(--ui-primary)/30;
+}
+
+

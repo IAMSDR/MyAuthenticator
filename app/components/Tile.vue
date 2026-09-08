@@ -3,6 +3,8 @@ import * as OTPAuth from "otpauth";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import Edit from "./Edit.vue";
 import Share from "./Share.vue";
+import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
+import { deleteCachedAccount } from "~/utils/cache";
 
 const overlay = useOverlay();
 
@@ -18,15 +20,15 @@ const OTP =
     ? new OTPAuth.TOTP(props.account)
     : new OTPAuth.HOTP(props.account);
 
-const token = ref("0");
+const token = ref("000000");
 
-const intervel = ref<NodeJS.Timeout>();
+const interval = ref<ReturnType<typeof setInterval>>();
 
 const percentage = ref(0);
 
 const deleteConfirmation = ref(false);
 
-const options = ref(null);
+const options = ref<HTMLElement | null>(null);
 
 const showOptions = ref(false);
 
@@ -48,10 +50,10 @@ const copyToken = () => {
 };
 
 const updateToken = () => {
-  const period = props.account.period;
+  const period = props.account.period ?? 30;
   const remainingSeconds = period * (1 - ((Date.now() / 1000 / period) % 1));
   percentage.value = Math.round(
-    (remainingSeconds / props.account.period) * 280
+    (remainingSeconds / period) * 280
   );
   if (remainingSeconds < 2 || remainingSeconds > period - 2)
     token.value = OTP.generate();
@@ -68,40 +70,62 @@ const openShare = () => {
 };
 
 const deleteAccount = async () => {
-  const toastid = toast.loading("loading...");
-  $fetch("/api/accounts", {
+  if (!ensureOnline("delete this authenticator")) return;
+  close();
+
+  const targetId = props.account.id;
+  const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
+  const prevAccount = props.account;
+  const prevIndex = accountsData.value ? accountsData.value.findIndex((a) => a.id === targetId) : -1;
+
+  if (accountsData.value) {
+    accountsData.value = accountsData.value.filter((a) => a.id !== targetId);
+  }
+
+  const toastId = toast.loading("Deleting...");
+  $fetch<{ status: number; message: string; version: number }>("/api/accounts", {
     method: "DELETE",
-    query: { id: props.account.id },
+    query: { id: targetId },
   })
     .then(async (res) => {
-      toast.update(toastid, {
-        message: res.message,
+      toast.update(toastId, {
+        message: res.message || "Deleted successfully",
         type: "success",
       });
-      await refreshNuxtData("accounts");
+      await deleteCachedAccount(targetId, res.version);
     })
-    .catch((err) => {
-      console.error(err);
-      toast.update(toastid, {
-        message: err?.data?.message ?? err,
+    .catch(async (err) => {
+      toast.update(toastId, {
+        message: getWriteErrorMessage(err, "delete this authenticator"),
         type: "error",
       });
+      if (accountsData.value && prevAccount && !accountsData.value.some((a) => a.id === targetId)) {
+        const next = [...accountsData.value];
+        if (prevIndex >= 0 && prevIndex <= next.length) {
+          next.splice(prevIndex, 0, prevAccount);
+        } else {
+          next.push(prevAccount);
+        }
+        accountsData.value = next;
+      }
+      if (onlineNow()) await refreshNuxtData("accounts");
     });
 };
 
 onMounted(() => {
   token.value = OTP.generate();
-  if (props.account.type == "TOTP")
-    intervel.value = setInterval(updateToken, 1000);
+  updateToken();
+  if (props.account.type === "TOTP")
+    interval.value = setInterval(updateToken, 1000);
 });
 
 onUnmounted(() => {
-  clearInterval(intervel.value);
+  if (interval.value) clearInterval(interval.value);
 });
 </script>
 
 <template>
-  <UCard :ui="{ body: '!p-0' }">
+  <UCard :ui="{ body: '!p-0' }" class="w-full">
     <div class="flex items-center w-full h-full min-h-[6.375rem] p-2 relative">
       <div class="logo flex-none h-full w-[4.5rem] flex-center">
         <div
@@ -131,14 +155,14 @@ onUnmounted(() => {
       </div>
       <div class="flex flex-col h-full ml-5 overflow-hidden">
         <div class="flex flex-col">
-          <span class="text-sm uppercase">{{ account.issuer }}</span>
-          <span class="text-xs text-slate-400 mt-0.5">{{ account.label }}</span>
+          <span class="text-sm uppercase font-semibold text-neutral-900 dark:text-neutral-100 truncate">{{ account.issuer }}</span>
+          <span class="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 truncate">{{ account.label }}</span>
         </div>
         <div class="h-full flex items-center mt-2 pb-1">
           <UTooltip text="Click to copy" class="cursor-pointer">
             <span
+              class="text-3xl text-neutral-900 dark:text-neutral-100 font-mono font-medium tracking-wide hover:text-(--ui-primary) transition-colors cursor-pointer"
               @click="copyToken"
-              class="text-3xl text-neutral-800 dark:text-neutral-100 font-medium tracking-wide"
               >{{ token }}</span
             >
           </UTooltip>
@@ -146,9 +170,9 @@ onUnmounted(() => {
       </div>
       <div class="h-full flex items-center ml-auto">
         <UIcon
-          class="cursor-pointer h-6 w-6 text-neutral-400 duration-300"
+          class="cursor-pointer h-6 w-6 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 duration-300"
           :class="showOptions && `rotate-180`"
-          name="i-heroicons-chevron-right-16-solid"
+          name="i-lucide-chevron-right"
           @click="optionsToggleHandler"
         />
       </div>
@@ -161,60 +185,70 @@ onUnmounted(() => {
       >
         <Transition name="slide">
           <div
-            ref="options"
             v-show="showOptions"
-            class="w-60 h-full bg-white dark:bg-neutral-900 overflow-hidden rounded-[calc(var(--ui-radius)*2)] pl-5 pr-4"
+            ref="options"
+            class="w-60 h-full bg-white dark:bg-neutral-900 overflow-hidden rounded-r-lg pl-5 pr-4 flex items-center border-l border-neutral-200 dark:border-neutral-800"
           >
-            <Transition name="slide2">
+            <Transition name="slide2" mode="out-in">
               <div
                 v-if="!deleteConfirmation"
+                key="options"
                 class="flex-center w-full h-full space-x-4 text-xs"
               >
                 <div class="flex-center flex-col space-y-2 p-2">
                   <UButton
-                    icon="i-heroicons-pencil-solid"
+                    icon="i-lucide-pencil"
                     variant="soft"
                     size="md"
+                    color="neutral"
+                    aria-label="Edit"
                     @click="openEdit"
                   />
-                  <span>Edit</span>
+                  <span class="text-neutral-600 dark:text-neutral-400">Edit</span>
                 </div>
                 <div class="flex-center flex-col space-y-2 p-2">
                   <UButton
-                    icon="i-heroicons-qr-code-solid"
+                    icon="i-lucide-qr-code"
                     variant="soft"
                     size="md"
+                    color="neutral"
+                    aria-label="Share"
                     @click="openShare"
                   />
-                  <span>Share</span>
+                  <span class="text-neutral-600 dark:text-neutral-400">Share</span>
                 </div>
                 <div class="flex-center flex-col space-y-2 p-2">
                   <UButton
-                    icon="i-heroicons-trash-20-solid"
+                    icon="i-lucide-trash-2"
                     variant="soft"
                     size="md"
                     color="error"
+                    aria-label="Delete"
                     @click="deleteConfirmation = true"
                   />
-                  <span>Delete</span>
+                  <span class="text-red-600 dark:text-red-400">Delete</span>
                 </div>
               </div>
               <div
-                v-else="deleteConfirmation"
+                v-else
+                key="confirm"
                 class="h-full w-full flex-center space-x-4 text-sm font-semibold"
               >
-                <span>Are you sure ?</span>
+                <span class="text-xs text-neutral-800 dark:text-neutral-200">Are you sure?</span>
                 <UButton
-                  icon="i-entypo-cross"
+                  icon="i-lucide-x"
                   variant="soft"
                   size="md"
+                  color="neutral"
+                  aria-label="Cancel"
                   @click="deleteConfirmation = false"
                 />
                 <UButton
-                  icon="i-heroicons-trash-20-solid"
+                  icon="i-lucide-trash-2"
                   variant="soft"
                   size="md"
                   color="error"
+                  aria-label="Confirm delete"
                   @click="deleteAccount"
                 />
               </div>

@@ -1,44 +1,108 @@
 import * as OTPAuth from "otpauth";
 import { Payload, type Payload_OtpParameters } from "./proto/google";
+import {
+  findCachedIconMatch,
+  getCachedIconSearch,
+  setCachedIconSearch,
+} from "./iconCache";
+
+const toIconEntry = (icon: string) => {
+  const parts = icon.split(":");
+  const collection = parts[0];
+  const name = parts[1] || "";
+  return {
+    label: name.replace(/[-_]/g, " "),
+    description: collection,
+    icon: `i-${collection}-${name}`,
+  };
+};
 
 export const getIcons = async (query: string) => {
-  return await $fetch<{ icons: string[] }>(
-    "https://api.iconify.design/search",
-    {
-      query: {
-        query: query,
-        limit: 999,
-        prefixes:
-          "logos,simple-icons,devicon,token-branded,mdi,ri,line-icons,articons,teeny-icons,mingcute",
-      },
-    }
-  ).then((res) => {
-    if (!res.icons.length)
-      return [
-        {
-          label: query,
-          icon: defaultIcon,
+  const clean = query?.trim();
+  if (!clean) return [];
+
+  // Offline: no server call — immediately serve IDB/default fallback.
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    const cached = await getCachedIconSearch(clean);
+    if (cached?.length) return cached;
+    return [{ label: clean, icon: defaultIcon }];
+  }
+
+  try {
+    const res = await $fetch<{ icons: string[] }>(
+      "https://api.iconify.design/search",
+      {
+        query: {
+          query: clean,
+          limit: 30,
         },
-      ];
-    else
-      return res.icons.map((icon) => ({
-        label: icon.split(":")[1]?.split("-")[0]!,
-        icon: `i-${icon.replace(":", "-")}`,
-      }));
-  });
+      },
+    );
+
+    if (!res.icons || !res.icons.length) {
+      // Remember the fallback too so offline searches stay consistent.
+      const fallback = [{ label: clean, icon: defaultIcon }];
+      await setCachedIconSearch(clean, fallback);
+      return fallback;
+    }
+
+    const mapped = res.icons.map(toIconEntry);
+    // Cache for offline use (previously searched/used icons resolve from IDB).
+    await setCachedIconSearch(clean, mapped);
+    return mapped;
+  } catch {
+    // Fetch failure: serve previously cached results for this query when available.
+    const cached = await getCachedIconSearch(clean);
+    if (cached?.length) return cached;
+    return [
+      {
+        label: clean,
+        icon: defaultIcon,
+      },
+    ];
+  }
 };
 
 export const matchIcon = async (query: string) => {
-  const icon = query.toLowerCase().trim();
-  return await $fetch<string>("/_nuxt_icon/:collection/simple-icons.json", {
-    query: {
-      icons: icon,
-    },
-    async onResponse({ response }) {
-      if (response.status === 200) response._data = `i-simple-icons-${icon}`;
-      else response._data = defaultIcon;
-    },
-  });
+  const icon = query?.toLowerCase().trim();
+  if (!icon) return defaultIcon;
+
+  // Offline: no server call — resolve from IDB directly.
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    const cached = await findCachedIconMatch(icon);
+    if (cached) return cached;
+    return defaultIcon;
+  }
+
+  try {
+    const res = await $fetch<{ icons: string[] }>(
+      "https://api.iconify.design/search",
+      {
+        query: {
+          query: icon,
+          collection: "simple-icons",
+          limit: 32,
+        },
+      },
+    );
+
+    if (res.icons && res.icons.length > 0) {
+      const match =
+        res.icons.find((i) => i.startsWith("simple-icons:")) || res.icons[0];
+      if (match) {
+        const entry = toIconEntry(match);
+        await setCachedIconSearch(icon, [entry]);
+        return entry.icon;
+      }
+    }
+  } catch {
+    // Fetch failure: resolve from previously cached icons.
+    const cached = await findCachedIconMatch(icon);
+    if (cached) return cached;
+    return defaultIcon;
+  }
+
+  return defaultIcon;
 };
 
 export const extractAccountsFromUriList = async (uriList: string[]) => {
@@ -77,7 +141,7 @@ export const extractAccountsFromGoogleUri = async (uri: string) => {
   let otpParameters: Payload_OtpParameters[] = [];
   try {
     const payload = Payload.decode(
-      Uint8Array.from(atob(data), (c) => c.charCodeAt(0))
+      Uint8Array.from(atob(data), (c) => c.charCodeAt(0)),
     );
 
     otpParameters = payload.otpParameters;
@@ -113,7 +177,7 @@ export const extractAccountsFromGoogleUri = async (uri: string) => {
       secret: new OTPAuth.Secret({
         buffer: otp.secret.buffer.slice(
           otp.secret.byteOffset,
-          otp.secret.byteOffset + otp.secret.byteLength
+          otp.secret.byteOffset + otp.secret.byteLength,
         ),
       }).base32,
       algorithm: algorithm,
