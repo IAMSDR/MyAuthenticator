@@ -75,7 +75,7 @@ const deleteAccount = async () => {
 
   const targetId = props.account.id;
   const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
-  const prevAccount = props.account;
+  const prevAccount = accountsData.value?.find((a) => a.id === targetId);
   const prevIndex = accountsData.value ? accountsData.value.findIndex((a) => a.id === targetId) : -1;
 
   if (accountsData.value) {

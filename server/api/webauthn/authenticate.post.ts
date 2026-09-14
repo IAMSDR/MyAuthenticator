@@ -47,20 +47,16 @@ export default defineWebAuthnAuthenticateEventHandler({
     return credential as unknown as { id: string; publicKey: string; counter: number; backedUp: boolean; transports: unknown };
   },
   async onSuccess(event, { credential, authenticationInfo }: { credential?: { id?: string }; authenticationInfo?: { newCounter?: number } }) {
-    await setUserSession(event, { user: "ADMIN" });
     if (credential?.id && authenticationInfo?.newCounter !== undefined) {
-      try {
-        const redis = await getRedis();
-        const raw = await redis.hget(redisKeys.passkeys, credential.id);
-        if (raw) {
-          const passkey = JSON.parse(raw);
-          passkey.counter = authenticationInfo.newCounter;
-          await redis.hset(redisKeys.passkeys, credential.id, JSON.stringify(passkey));
-        }
-      } catch (err) {
-        console.error("Failed to update passkey counter:", err);
+      const redis = await getRedis();
+      const raw = await redis.hget(redisKeys.passkeys, credential.id);
+      if (raw) {
+        const passkey = JSON.parse(raw);
+        passkey.counter = authenticationInfo.newCounter;
+        await redis.hset(redisKeys.passkeys, credential.id, JSON.stringify(passkey));
       }
     }
+    await setUserSession(event, { user: "ADMIN" });
     // Note: wrappedDEK fetch is done via GET /api/webauthn/wrap?credentialId=...
     // If no wrapper exists, client will show "Passkey has no decrypt wrapper, use password login"
   },

@@ -111,7 +111,7 @@ PORT=9696
 
 - When you first set up the app, a random 256-bit encryption key (DEK) is created in your browser.
 - Your password and passkeys wrap (encrypt) this key.
-- The server only checks your password hash for login and stores the encrypted vault. It never knows your unencrypted secrets or the DEK.
+- The server only checks your password hash for login and stores the encrypted vault. The raw DEK and unencrypted secrets are never received or stored on the server.
 - The decryption key lives only in browser memory and is cleared when you lock the vault, sign out, or close the page.
 - Backups use their own separate password, so your export stays safe even if shared.
 

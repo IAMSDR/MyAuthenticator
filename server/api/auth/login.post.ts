@@ -13,9 +13,12 @@ export default eventHandler(async (event) => {
 
   const ip = getRequestIP(event, { xForwardedFor: true }) || "unknown";
   const rateLimitKey = `auth:ratelimit:login:${ip}`;
-  const attempts = await redis.get(rateLimitKey);
-  const count = attempts ? parseInt(attempts, 10) : 0;
-  if (count >= 10) {
+  const results = await runTransaction([["INCRBY", rateLimitKey, 1]]);
+  const attempts = Number(results[0]) || 1;
+  if (attempts === 1) {
+    await runTransaction([["EXPIRE", rateLimitKey, 600]]);
+  }
+  if (attempts > 10) {
     throw createError({
       statusCode: 429,
       message: "Too many failed login attempts. Please try again in 10 minutes.",
@@ -24,13 +27,10 @@ export default eventHandler(async (event) => {
 
   const ok = await bcryptVerify(hash, data.password);
   if (!ok) {
-    await redis.set(rateLimitKey, String(count + 1), { ex: 600 });
     throw createError({ statusCode: 401, message: "Invalid Credentials" });
   }
 
-  if (count > 0) {
-    await redis.del(rateLimitKey);
-  }
+  await redis.del(rateLimitKey);
 
   const wrappedDEK = await redis.get(redisKeys.dekPassword);
   if (!wrappedDEK) throw createError({ statusCode: 500, message: "Wrapped DEK missing" });
