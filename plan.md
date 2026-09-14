@@ -209,7 +209,7 @@ Since zero-knowledge with DEK envelope and no recovery, provide explicit wipe on
 
 - Password transient on server during hash verify — not stored, HTTPS only, logs must not log body (disable).
 - Hash with `argon2id` m=64MB t=3 p=1 or `bcrypt` cost 12. Not PBKDF2 alone (PBKDF2 100k kept for `auth:dek:password` wrapping via `aes.ts:16`, separate from hash).
-- `auth:dek:password` and `auth:dek:prf:*` in Redis are `AES-GCM iv+ct` ciphertexts; server never sees `DEK` or `prfSecret`. `auth:prfSalt` stored plaintext in Redis is fine (PRF input, not secret).
+- `auth:dek:password` and `auth:dek:prf:*` in Redis are `AES-GCM iv+ct` ciphertexts; raw DEK and unencrypted secrets are never received or stored on the server. `auth:prfSalt` stored plaintext in Redis is fine (PRF input, not secret).
 - Memory-only `DEK` (`CryptoKey`) cleared on `logout`, `beforeunload`, tab close, `useEncryptionKey` not persisted to `localStorage`/`IndexedDB` raw; `IndexedDB` holds only wrapped strings + ciphertext cache.
 - XSS: script can read memory `DEK` while tab open — mitigate with CSP, no `eval`, strict `Content-Security-Policy`.
 - Passkey PRF not supported fallback must require password — never store raw `DEK` or password plaintext in Redis/IndexedDB.

@@ -25,10 +25,19 @@ type RedisClient = {
   hdel: (key: string, ...fields: string[]) => Promise<number>;
   hincrby: (key: string, field: string, increment: number) => Promise<number>;
   incrby?: (key: string, increment: number) => Promise<number>;
+  incrWithExpire?: (key: string, seconds: number) => Promise<number>;
   keys?: (pattern: string) => Promise<string[]>;
   scan?: (cursor: number, opts?: { match?: string; count?: number }) => Promise<[string, string[]]>;
   multiExec?: (commands: [string, ...unknown[]][]) => Promise<unknown[]>;
 };
+
+const RATE_LIMIT_LUA_SCRIPT = `
+local current = redis.call('INCRBY', KEYS[1], 1)
+if current == 1 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+return current
+`.trim();
 
 let _redis: RedisClient | null = null;
 let _redisPromise: Promise<RedisClient> | null = null;
@@ -62,6 +71,10 @@ function createUpstashClient(url: string, token: string): RedisClient {
     },
     hdel: (key, ...fields) => client.hdel(key, ...fields) as Promise<number>,
     hincrby: (key, field, increment) => client.hincrby(key, field, increment) as Promise<number>,
+    incrWithExpire: async (key, seconds) => {
+      const res = await client.eval(RATE_LIMIT_LUA_SCRIPT, [key], [seconds]);
+      return Number(res) || 1;
+    },
     scan: async (cursor, opts) => {
       // Upstash scan via SCAN command
       const args: unknown[] = [cursor];
@@ -125,6 +138,10 @@ async function createIORedisClient(redisUrl: string): Promise<RedisClient> {
     },
     hdel: (key, ...fields) => client.hdel(key, ...fields),
     hincrby: (key, field, increment) => client.hincrby(key, field, increment),
+    incrWithExpire: async (key, seconds) => {
+      const res = await client.eval(RATE_LIMIT_LUA_SCRIPT, 1, key, seconds);
+      return Number(res) || 1;
+    },
     scan: async (cursor, opts) => {
       const res = await client.scan(cursor.toString(), "MATCH", opts?.match ?? "*", "COUNT", opts?.count ?? 100);
       return [res[0], res[1]] as [string, string[]];
@@ -159,6 +176,19 @@ export async function runTransaction(commands: [string, ...unknown[]][]): Promis
     results.push(await (redis as unknown as Record<string, (...a: unknown[]) => Promise<unknown>>)[lc](...args));
   }
   return results;
+}
+
+// Atomic rate-limiting increment with conditional expiry on initial creation
+export async function incrWithExpire(key: string, seconds: number): Promise<number> {
+  const redis = await getRedis();
+  if (redis.incrWithExpire) {
+    return await redis.incrWithExpire(key, seconds);
+  }
+  const results = await runTransaction([
+    ["INCRBY", key, 1],
+    ["EXPIRE", key, seconds, "NX"],
+  ]);
+  return Number(results[0]) || 1;
 }
 
 // Extract the HINCRBY value for `key field` from a transaction, by locating the

@@ -11,13 +11,10 @@ export default eventHandler(async (event) => {
   const hash = await redis.get(redisKeys.passwordHash);
   if (!hash) throw createError({ statusCode: 500, message: "Password hash missing" });
 
-  const ip = getRequestIP(event, { xForwardedFor: true }) || "unknown";
+  const req = event.node?.req as { ip?: string } | undefined;
+  const ip = req?.ip || getRequestHeader(event, "cf-connecting-ip") || "unknown";
   const rateLimitKey = `auth:ratelimit:login:${ip}`;
-  const results = await runTransaction([["INCRBY", rateLimitKey, 1]]);
-  const attempts = Number(results[0]) || 1;
-  if (attempts === 1) {
-    await runTransaction([["EXPIRE", rateLimitKey, 600]]);
-  }
+  const attempts = await incrWithExpire(rateLimitKey, 600);
   if (attempts > 10) {
     throw createError({
       statusCode: 429,
