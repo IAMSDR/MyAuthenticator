@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "myauthenticator",
+  "main": "./.output/server/index.mjs",
+  "compatibility_date": "2025-07-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./.output/public"
+  },
+  "build": {
+    "command": "NITRO_PRESET=cloudflare_module pnpm build"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

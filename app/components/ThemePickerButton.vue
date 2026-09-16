@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import colors from "tailwindcss/colors";
+
 defineProps<{
-  label: string
-  icon?: string
-  chip?: string
-  selected?: boolean
-}>()
+  label: string;
+  icon?: string;
+  chip?: string;
+  selected?: boolean;
+}>();
 </script>
 
 <template>
@@ -14,7 +16,7 @@ defineProps<{
     variant="outline"
     :icon="icon"
     :label="label"
-    class="capitalize ring-(--ui-border) rounded-[calc(var(--ui-radius))] text-[11px]"
+    class="capitalize ring-(--ui-border) rounded-[calc(var(--ui-radius))] text-[11px] cursor-pointer"
     :class="[selected ? 'bg-(--ui-bg-elevated)' : 'hover:bg-(--ui-bg-elevated)/50']"
   >
     <template v-if="chip" #leading>
@@ -23,11 +25,12 @@ defineProps<{
           class="inline-block size-2 rounded-full"
           :class="`bg-(--color-light) dark:bg-(--color-dark)`"
           :style="{
-            '--color-light': `var(--color-${chip}-500)`,
-            '--color-dark': `var(--color-${chip}-400)`
-          }"
+            '--color-light': (colors as any)[chip === 'old-neutral' ? 'neutral' : chip]?.[500] ?? `var(--color-${chip}-500)`,
+            '--color-dark': (colors as any)[chip === 'old-neutral' ? 'neutral' : chip]?.[400] ?? `var(--color-${chip}-400)`,
+          } as any"
         />
       </slot>
     </template>
   </UButton>
 </template>
+

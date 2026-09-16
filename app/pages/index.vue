@@ -1,47 +1,143 @@
 <script setup lang="ts">
-definePageMeta({
-  middleware: "auth",
-});
+import { getCache, cacheAccountsFromServer } from "~/utils/cache";
+import { isNetworkError, onlineNow } from "~/utils/offline";
+import BackgroundPattern from "~/components/BackgroundPattern.vue";
+import AppNavbar from "~/components/AppNavbar.vue";
+import BottomBar from "~/components/BottomBar.vue";
 
-const { data, status } = await useLazyFetch("/api/accounts", {
-  key: "accounts",
-  server: false,
-});
+const { dek, decryptAccounts } = useEncryption();
+const { setOfflineState } = useOffline();
 
-const searchQuery = ref("");
+const sortByOrder = (accounts: CipherAccount[], order?: string[]) => {
+  const arr = [...accounts];
+  if (order?.length) {
+    const getIdx = (id: string) => {
+      const idx = order.indexOf(id);
+      return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+    };
+    arr.sort((a, b) => getIdx(a.id) - getIdx(b.id));
+  }
+  return arr;
+};
 
-const accounts = computed(() =>
-  showSearchBar.value
-    ? data.value?.filter((item) => {
-        const regex = new RegExp(searchQuery.value, "i");
-        return regex.test(item.label) || regex.test(item.issuer);
-      })
-    : data.value
-);
+const { data: cipherData, status } = await useAsyncData<CipherAccount[]>("accounts", async () => {
+  if (import.meta.server) return [] as CipherAccount[];
+  const cached = await getCache();
+  if (!onlineNow()) {
+    setOfflineState(true);
+    if (cached && Object.keys(cached.map).length) return sortByOrder(Object.values(cached.map) as CipherAccount[], cached.order);
+    return [] as CipherAccount[];
+  }
+  try {
+    const meta = await $fetch<{ version: number; updatedAt: string; count: number; order?: string[] }>("/api/accounts/meta");
+    // Server-first: always fetch fresh accounts while online and replace local cache.
+    const fresh = await $fetch<CipherAccount[]>("/api/accounts");
+    const order = Array.isArray(meta.order) && meta.order.length ? meta.order : undefined;
+    await cacheAccountsFromServer(fresh, { version: meta.version, updatedAt: meta.updatedAt }, order);
+    setOfflineState(false);
+    return sortByOrder(fresh, order);
+  } catch (e: any) {
+    // Only fall back to cache on true offline/transport failures, not HTTP 401/500.
+    if (isNetworkError(e) || !onlineNow()) {
+      setOfflineState(true);
+      if (cached && Object.keys(cached.map).length) return sortByOrder(Object.values(cached.map) as CipherAccount[], cached.order);
+      return [] as CipherAccount[];
+    }
+    // Surface HTTP errors (e.g. 401 session expiry) without masking with stale cache.
+    throw e;
+  }
+}, { server: false, default: () => [] as CipherAccount[] });
 
-// useState
+const decrypted = ref<Account[]>([]);
+const decryptError = ref<string | null>(null);
+
+watch([cipherData, dek], async () => {
+  if (!cipherData.value?.length) {
+    decrypted.value = [];
+    decryptError.value = null;
+    return;
+  }
+  if (!dek.value) {
+    decryptError.value = "Vault locked. Please login to decrypt.";
+    decrypted.value = [];
+    return;
+  }
+  try {
+    decrypted.value = await decryptAccounts(cipherData.value);
+    decryptError.value = null;
+  } catch (e) {
+    decryptError.value = String(e);
+  }
+}, { immediate: true, deep: true });
+
+const searchQuery = useState("searchQuery", () => "");
 const showSearchBar = useState("searchBar", () => false);
+
+const accounts = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase();
+  if (!query) return decrypted.value;
+  return decrypted.value.filter((item) =>
+    (item.label && item.label.toLowerCase().includes(query)) ||
+    (item.issuer && item.issuer.toLowerCase().includes(query))
+  );
+});
 </script>
 
 <template>
-  <Transition name="slidey">
-    <Search v-if="showSearchBar" v-model:modal-value="searchQuery" />
-  </Transition>
-  <div
-    v-if="!data?.length && status === 'success'"
-    class="h-dvh overflow-hidden flex-center flex-col space-y-2"
-  >
-    <UIcon name="i-heroicons-inbox-stack" class="h-8 w-8" />
-    <span class="text-lg sm:text-xl font-semibold">Nothing here yet.</span>
-    <span class="text-sm font-normal text-neutral-400"
-      >Please use the button below to add something !</span
-    >
+  <div class="relative min-h-screen flex flex-col">
+    <!-- Clean Dot Grid Texture without Cursor Glow -->
+    <BackgroundPattern />
+
+    <!-- Sleek Desktop Header & Top Navbar -->
+    <AppNavbar />
+
+    <main class="flex-1 w-full pb-24 md:pb-12">
+      <UContainer class="py-6">
+        <!-- Mobile minimal search — expands below header -->
+        <Transition name="slidey">
+          <div v-if="showSearchBar" class="md:hidden -mx-4 sm:-mx-6 lg:-mx-8 -mt-2 mb-2">
+            <Search v-model:modal-value="searchQuery" />
+          </div>
+        </Transition>
+
+        <!-- Empty State -->
+        <div
+          v-if="!cipherData?.length && status === 'success' && !decryptError"
+          class="min-h-[50vh] flex flex-col items-center justify-center space-y-3 text-center"
+        >
+          <div class="size-16 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-400">
+            <UIcon name="i-lucide-inbox" class="size-8" />
+          </div>
+          <h2 class="text-base sm:text-lg font-bold text-neutral-900 dark:text-neutral-100">No accounts stored yet</h2>
+          <p class="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm">
+            Please use the plus button to add your first authenticator account.
+          </p>
+        </div>
+
+        <!-- Locked Vault State -->
+        <div
+          v-else-if="decryptError"
+          class="min-h-[50vh] flex flex-col items-center justify-center space-y-3 p-4 text-center"
+        >
+          <div class="size-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
+            <UIcon name="i-lucide-lock" class="size-7" />
+          </div>
+          <h2 class="text-base font-bold text-neutral-900 dark:text-neutral-100">Vault locked</h2>
+          <p class="text-xs text-neutral-500 dark:text-neutral-400 max-w-xs">{{ decryptError }}</p>
+          <UButton to="/login" variant="soft" size="sm">Go to login</UButton>
+        </div>
+
+        <!-- Responsive Spacious Accounts Grid -->
+        <div
+          v-else
+          class="grid grid-cols-1 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4.5"
+        >
+          <Tile v-for="account in accounts" :key="account.id" :account="account" />
+        </div>
+      </UContainer>
+    </main>
+
+    <!-- Mobile Floating Bottom Navigation -->
+    <BottomBar />
   </div>
-  <div
-    v-else
-    class="h-full scroll-smooth w-full grid place-items-center gap-y-10 gap-x-4 mt-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 pb-20 sm:pb-10"
-  >
-    <Tile v-for="account in accounts" :account="account" :key="account.id" />
-  </div>
-  <BottomBar />
 </template>

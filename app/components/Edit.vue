@@ -1,110 +1,169 @@
 <script setup lang="ts">
+import AdaptiveModal from "./AdaptiveModal.vue";
 import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
 import { toast } from "@steveyuowo/vue-hot-toast";
+import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
-const props = defineProps<{ account: AccountEdit; accountId: number }>();
+const props = defineProps<{ account: AccountEdit; accountId: string }>();
 
 const emit = defineEmits(["close"]);
 
 const state = reactive<AccountEdit>({ ...props.account });
 
 const searchIcon = ref("");
-
 const searchIconDebounced = refDebounced(searchIcon, 300);
 
 const icons = ref<Icon[]>([]);
+const searchingIcons = ref(false);
 
 const loading = ref(false);
 
 async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
-  loading.value = true;
-  const toastid = toast.loading("loading...");
-  await $fetch("/api/accounts", {
+  if (!ensureOnline("save changes")) return;
+
+  const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
+  const prevAccount = accountsData.value?.find((acc) => acc.id === props.accountId);
+
+  // Optimistically update memory so the tile reflects edits instantly
+  if (accountsData.value) {
+    accountsData.value = accountsData.value.map((acc) =>
+      acc.id === props.accountId ? { ...acc, ...event.data } : acc
+    );
+  }
+
+  // Dismiss modal immediately
+  emit("close");
+
+  const toastid = toast.loading("Saving...");
+  $fetch<{ status: number; message: string; version: number }>("/api/accounts", {
     method: "PATCH",
     query: { id: props.accountId },
     body: event.data,
   })
     .then(async (res) => {
       toast.update(toastid, {
-        message: res.message,
+        message: res.message || "Updated successfully",
         type: "success",
       });
-      await refreshNuxtData("accounts");
-      emit("close");
+      await updateCachedAccountFields(props.accountId, event.data, res.version);
     })
-    .catch((err) => {
+    .catch(async (err) => {
       toast.update(toastid, {
-        message: err?.data?.message ?? err,
+        message: getWriteErrorMessage(err, "save changes"),
         type: "error",
       });
+      // Rollback only affected account on failure
+      if (accountsData.value && prevAccount) {
+        accountsData.value = accountsData.value.map((acc) =>
+          acc.id === props.accountId ? prevAccount : acc
+        );
+      }
+      if (onlineNow()) await refreshNuxtData("accounts");
       console.error(err);
     });
-  loading.value = false;
 }
 
 async function onError(event: FormErrorEvent) {
-  console.log(event.errors[0]);
-  toast.error(event.errors[0]?.message!);
+  toast.error(event.errors[0]?.message ?? "Validation error");
 }
 
 watch(searchIconDebounced, async (query) => {
-  icons.value = await getIcons(query);
+  if (!query?.trim()) {
+    icons.value = [];
+    searchingIcons.value = false;
+    return;
+  }
+  searchingIcons.value = true;
+  try {
+    icons.value = await getIcons(query);
+  } finally {
+    searchingIcons.value = false;
+  }
 });
 </script>
 
 <template>
-  <UModal title="Edit" :close="false" :dismissible="false">
+  <AdaptiveModal title="Edit Account" description="Update details for this authenticator">
     <template #body>
       <UForm
         :schema="accountEditSchema"
         :state="state"
+        class="space-y-4"
         @submit="updateAccount"
         @error="onError"
       >
-        <UFormField size="xl" label="Icon" name="icon" required>
+        <UFormField label="Icon" name="icon" required>
           <UInputMenu
+            v-model="state.icon"
+            v-model:search-term="searchIcon"
             ignore-filter
             :items="icons || []"
             :icon="state.icon"
-            :placeholder="state.issuer"
-            v-model:search-term="searchIcon"
-            size="xl"
+            :loading="searchingIcons"
+            :placeholder="state.issuer || 'Search icon'"
+            size="md"
             value-key="icon"
-            v-model="state.icon"
             required
+            class="w-full"
+            :ui="{ base: 'h-10' }"
           >
-            <template #empty>Type something to search</template>
+            <template #item-leading="{ item }">
+              <UIcon :name="item.icon" class="size-4 shrink-0" />
+            </template>
+            <template #item-trailing="{ item }">
+              <span v-if="item.description" class="text-[10px] uppercase font-mono text-neutral-400 dark:text-neutral-500">
+                {{ item.description }}
+              </span>
+            </template>
+            <template #empty>
+              <span v-if="searchingIcons">Searching icons...</span>
+              <span v-else-if="searchIcon">No icons found for "{{ searchIcon }}"</span>
+              <span v-else>Type to search brand or icon</span>
+            </template>
           </UInputMenu>
         </UFormField>
-        <UFormField size="xl" label="Issuer" name="issuer" required>
+
+        <UFormField label="Issuer" name="issuer" required>
           <UInput
-            size="xl"
             v-model="state.issuer"
+            size="md"
             required
-            icon="i-heroicons-building-office-2"
+            icon="i-lucide-building-2"
+            :ui="{ base: 'h-10' }"
           />
         </UFormField>
-        <UFormField size="xl" label="Label" name="label" required>
+
+        <UFormField label="Label" name="label" required>
           <UInput
-            size="xl"
             v-model="state.label"
+            size="md"
             required
-            icon="i-heroicons-envelope"
+            icon="i-lucide-mail"
+            :ui="{ base: 'h-10' }"
           />
         </UFormField>
-        <div class="flex w-full justify-end space-x-4 mt-4 px-3">
+
+        <div class="flex justify-end gap-2 pt-2">
           <UButton
-            @click="emit('close')"
             label="Cancel"
             color="neutral"
             variant="ghost"
-            size="lg"
+            size="sm"
+            class="cursor-pointer"
+            @click="emit('close')"
           />
-          <UButton type="submit" :disabled="loading" variant="soft" size="md"
-            >Submit</UButton
+          <UButton
+            type="submit"
+            :disabled="loading"
+            :loading="loading"
+            size="sm"
+            class="cursor-pointer"
+            >Save changes</UButton
           >
         </div>
       </UForm>
     </template>
-  </UModal>
+  </AdaptiveModal>
 </template>
+
+

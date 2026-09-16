@@ -1,105 +1,57 @@
 <script setup lang="ts">
-import colors from "tailwindcss/colors";
-import { omit } from "#ui/utils";
+import AdaptiveModal from "./AdaptiveModal.vue";
 
-const appConfig = useAppConfig();
-const colorMode = useColorMode();
-
-const neutralColors = ["slate", "gray", "zinc", "neutral", "stone"];
-const neutral = computed({
-  get() {
-    return appConfig.ui.colors.neutral;
-  },
-  set(option) {
-    appConfig.ui.colors.neutral = option;
-    window.localStorage.setItem("nuxt-ui-neutral", appConfig.ui.colors.neutral);
-  },
-});
-
-const colorsToOmit = [
-  "inherit",
-  "current",
-  "transparent",
-  "black",
-  "white",
-  ...neutralColors,
-];
-const primaryColors = Object.keys(omit(colors, colorsToOmit as any));
-const primary = computed({
-  get() {
-    return appConfig.ui.colors.primary;
-  },
-  set(option) {
-    appConfig.ui.colors.primary = option;
-    window.localStorage.setItem("nuxt-ui-primary", appConfig.ui.colors.primary);
-    setBlackAsPrimary(false);
-  },
-});
-
-const radiuses = [0, 0.125, 0.25, 0.375, 0.5];
-const radius = computed({
-  get() {
-    return appConfig.theme.radius;
-  },
-  set(option) {
-    appConfig.theme.radius = option;
-    window.localStorage.setItem(
-      "nuxt-ui-radius",
-      String(appConfig.theme.radius)
-    );
-  },
-});
-
-const modes = [
-  {
-    label: "light",
-    icon: "i-line-md-moon-filled-to-sunny-filled-loop-transition",
-  },
-  {
-    label: "dark",
-    icon: "i-line-md-sunny-filled-loop-to-moon-filled-loop-transition",
-  },
-  { label: "system", icon: "i-hugeicons-computer" },
-];
-const mode = computed({
-  get() {
-    return colorMode.value;
-  },
-  set(option) {
-    colorMode.preference = option;
-  },
-});
-
-function setBlackAsPrimary(value: boolean) {
-  appConfig.theme.blackAsPrimary = value;
-  window.localStorage.setItem("nuxt-ui-black-as-primary", String(value));
-}
+const {
+  neutralColors,
+  neutral,
+  primaryColors,
+  primary,
+  blackAsPrimary,
+  setBlackAsPrimary,
+  radiuses,
+  radius,
+  fonts,
+  font,
+  icon,
+  icons,
+  modes,
+  mode,
+  hasChanges,
+  resetTheme,
+} = useTheme();
 </script>
 
 <template>
-  <UModal
-    title="Theme"
-    :ui="{ close: 'top-2 start-6 end-auto' }"
-    close-icon="i-lucide-arrow-left"
+  <AdaptiveModal
+    title="Theme & Style"
+    description="Customize colors, radius and appearance"
   >
     <template #body>
-      <div class="p-1 flex-col flex space-y-3 py-2">
+      <div class="flex flex-col gap-4">
+        <!-- Primary -->
         <fieldset>
-          <legend class="text-[11px] leading-none font-semibold mb-2">
+          <legend class="text-[11px] leading-none font-semibold mb-2 select-none flex items-center gap-1">
             Primary
+            <UButton
+              to="https://ui.nuxt.com/docs/getting-started/theme/css-variables#colors"
+              target="_blank"
+              size="xs"
+              color="neutral"
+              variant="link"
+              icon="i-lucide-help-circle"
+              class="p-0 -my-0.5"
+              :ui="{ leadingIcon: 'size-3' }"
+              aria-label="Primary help"
+            />
           </legend>
-
           <div class="grid grid-cols-3 gap-1 -mx-2">
             <ThemePickerButton
-              chip="primary"
               label="Black"
-              :selected="appConfig.theme.blackAsPrimary"
+              :selected="blackAsPrimary"
               @click="setBlackAsPrimary(true)"
             >
               <template #leading>
-                <span
-                  class="inline-block w-2 h-2 rounded-full bg-black dark:bg-white"
-                />
+                <span class="inline-block size-2 rounded-full bg-black dark:bg-white" />
               </template>
             </ThemePickerButton>
             <ThemePickerButton
@@ -107,32 +59,56 @@ function setBlackAsPrimary(value: boolean) {
               :key="color"
               :label="color"
               :chip="color"
-              :selected="!appConfig.theme.blackAsPrimary && primary === color"
+              :selected="!blackAsPrimary && primary === color"
               @click="primary = color"
             />
           </div>
         </fieldset>
-        <fieldset>
-          <legend class="text-[11px] leading-none font-semibold mb-2">
-            Neutral
-          </legend>
 
+        <!-- Neutral -->
+        <fieldset>
+          <legend class="text-[11px] leading-none font-semibold mb-2 select-none flex items-center gap-1">
+            Neutral
+            <UButton
+              to="https://ui.nuxt.com/docs/getting-started/theme/css-variables#text"
+              target="_blank"
+              size="xs"
+              color="neutral"
+              variant="link"
+              icon="i-lucide-help-circle"
+              class="p-0 -my-0.5"
+              :ui="{ leadingIcon: 'size-3' }"
+              aria-label="Neutral help"
+            />
+          </legend>
           <div class="grid grid-cols-3 gap-1 -mx-2">
             <ThemePickerButton
               v-for="color in neutralColors"
               :key="color"
               :label="color"
-              :chip="color"
+              :chip="color === 'neutral' ? 'old-neutral' : color"
               :selected="neutral === color"
               @click="neutral = color"
             />
           </div>
         </fieldset>
-        <fieldset>
-          <legend class="text-[11px] leading-none font-semibold mb-2">
-            Radius
-          </legend>
 
+        <!-- Radius -->
+        <fieldset>
+          <legend class="text-[11px] leading-none font-semibold mb-2 select-none flex items-center gap-1">
+            Radius
+            <UButton
+              to="https://ui.nuxt.com/docs/getting-started/theme/css-variables#radius"
+              target="_blank"
+              size="xs"
+              color="neutral"
+              variant="link"
+              icon="i-lucide-help-circle"
+              class="p-0 -my-0.5"
+              :ui="{ leadingIcon: 'size-3' }"
+              aria-label="Radius help"
+            />
+          </legend>
           <div class="grid grid-cols-5 gap-1 -mx-2">
             <ThemePickerButton
               v-for="r in radiuses"
@@ -144,22 +120,112 @@ function setBlackAsPrimary(value: boolean) {
             />
           </div>
         </fieldset>
-        <fieldset>
-          <legend class="text-[11px] leading-none font-semibold mb-2">
-            Theme
-          </legend>
 
+        <!-- Font -->
+        <fieldset>
+          <legend class="text-[11px] leading-none font-semibold mb-2 select-none flex items-center gap-1">
+            Font
+            <UButton
+              to="https://ui.nuxt.com/docs/getting-started/integrations/fonts"
+              target="_blank"
+              size="xs"
+              color="neutral"
+              variant="link"
+              icon="i-lucide-help-circle"
+              class="p-0 -my-0.5"
+              :ui="{ leadingIcon: 'size-3' }"
+              aria-label="Font help"
+            />
+          </legend>
+          <div class="-mx-2">
+            <USelect
+              v-model="font"
+              size="sm"
+              color="neutral"
+              icon="i-lucide-type"
+              :items="fonts"
+              class="w-full ring-default rounded-sm hover:bg-elevated/50 text-[11px] data-[state=open]:bg-elevated/50"
+              :ui="{ trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200' }"
+            />
+          </div>
+        </fieldset>
+
+        <!-- Icons -->
+        <fieldset>
+          <legend class="text-[11px] leading-none font-semibold mb-2 select-none flex items-center gap-1">
+            Icons
+            <UButton
+              to="https://ui.nuxt.com/docs/getting-started/integrations/icons"
+              target="_blank"
+              size="xs"
+              color="neutral"
+              variant="link"
+              icon="i-lucide-help-circle"
+              class="p-0 -my-0.5"
+              :ui="{ leadingIcon: 'size-3' }"
+              aria-label="Icons help"
+            />
+          </legend>
+          <div class="-mx-2">
+            <USelect
+              v-model="icon"
+              size="sm"
+              color="neutral"
+              :icon="icons.find(i => i.value === icon)?.icon"
+              :items="icons"
+              class="w-full ring-default rounded-sm hover:bg-elevated/50 capitalize text-[11px] data-[state=open]:bg-elevated/50"
+              :ui="{ item: 'capitalize text-[11px]', trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200' }"
+            />
+          </div>
+        </fieldset>
+
+        <!-- Color Mode -->
+        <fieldset>
+          <legend class="text-[11px] leading-none font-semibold mb-2 select-none flex items-center gap-1">
+            Color Mode
+            <UButton
+              to="https://ui.nuxt.com/docs/getting-started/integrations/color-mode"
+              target="_blank"
+              size="xs"
+              color="neutral"
+              variant="link"
+              icon="i-lucide-help-circle"
+              class="p-0 -my-0.5"
+              :ui="{ leadingIcon: 'size-3' }"
+              aria-label="Color mode help"
+            />
+          </legend>
           <div class="grid grid-cols-3 gap-1 -mx-2">
             <ThemePickerButton
               v-for="m in modes"
               :key="m.label"
               v-bind="m"
-              :selected="colorMode.preference === m.label"
+              :selected="mode === m.label"
               @click="mode = m.label"
             />
           </div>
         </fieldset>
+
+        <!-- Reset -->
+        <fieldset v-if="hasChanges">
+          <legend class="text-[11px] leading-none font-semibold mb-2 select-none">
+            Reset
+          </legend>
+          <div class="flex items-center -mx-2">
+            <UTooltip text="Reset theme to defaults">
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="sm"
+                icon="i-lucide-rotate-ccw"
+                label="Reset to defaults"
+                class="w-full ring-default hover:bg-elevated/50 text-[11px] justify-center"
+                @click="resetTheme"
+              />
+            </UTooltip>
+          </div>
+        </fieldset>
       </div>
     </template>
-  </UModal>
+  </AdaptiveModal>
 </template>
