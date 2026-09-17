@@ -1,10 +1,8 @@
-import { bcryptVerify } from "../../utils/hash";
-
 export default eventHandler(async (event) => {
   const { data, error } = await readValidatedBody(event, (body) => loginSchema.safeParse(body));
   if (error) throw createError({ statusCode: 400, statusMessage: "Validation Failed", message: error.message });
 
-  const redis = await getRedis();
+  const redis = await getRedis(event);
   const setupComplete = await redis.get(redisKeys.setupComplete);
   if (setupComplete !== "true") throw createError({ statusCode: 400, message: "Setup not complete" });
 
@@ -14,7 +12,7 @@ export default eventHandler(async (event) => {
   const req = event.node?.req as { ip?: string } | undefined;
   const ip = req?.ip || getRequestHeader(event, "cf-connecting-ip") || "unknown";
   const rateLimitKey = `auth:ratelimit:login:${ip}`;
-  const attempts = await incrWithExpire(rateLimitKey, 600);
+  const attempts = await incrWithExpire(rateLimitKey, 600, event);
   if (attempts > 10) {
     throw createError({
       statusCode: 429,

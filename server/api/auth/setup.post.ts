@@ -4,7 +4,7 @@ export default eventHandler(async (event) => {
   const { data, error } = await readValidatedBody(event, (body) => setupSchema.safeParse(body));
   if (error) throw createError({ statusCode: 400, statusMessage: "Validation Failed", message: error.message });
 
-  const redis = await getRedis();
+  const redis = await getRedis(event);
   // Atomically claim setup with NX lock (ex: 60s) to prevent concurrent setup races
   const claimed = await redis.set(redisKeys.setupComplete, "claimed", { nx: true, ex: 60 });
   if (!claimed) throw createError({ statusCode: 409, message: "Already setup or setup in progress" });
@@ -25,7 +25,7 @@ export default eventHandler(async (event) => {
       ["SET", redisKeys.setupComplete, "true"],
       ["HSET", redisKeys.accountsMeta, { version: "0", updatedAt: new Date().toISOString(), count: "0" }],
       ["DEL", redisKeys.accounts],
-    ]);
+    ], event);
   } catch (err) {
     // If setup fails, clear the temporary claim
     const current = await redis.get(redisKeys.setupComplete);

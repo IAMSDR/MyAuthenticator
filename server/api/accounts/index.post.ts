@@ -23,7 +23,7 @@ export default eventHandler(async (event) => {
   }
   const uniqueAccounts = Array.from(uniqueMap.values());
 
-  const redis = await getRedis();
+  const redis = await getRedis(event);
   // Check which account IDs already exist to only increment `count` for net-new records
   let newRecordsCount = 0;
   for (const acc of uniqueAccounts) {
@@ -45,7 +45,7 @@ export default eventHandler(async (event) => {
     commands.push(["HINCRBY", redisKeys.accountsMeta, "count", newRecordsCount]);
   }
 
-  const results = await runTransaction(commands);
+  const results = await runTransaction(commands, event);
   const version = versionFromTransaction(results, commands, redisKeys.accountsMeta, "version");
   return { status: 200, message: "Added successfully", version }; 
 });

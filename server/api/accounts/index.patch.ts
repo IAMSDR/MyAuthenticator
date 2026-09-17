@@ -9,7 +9,7 @@ export default eventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "Invalid body" });
   }
   // Allow partial cipherAccount or edit fields
-  const redis = await getRedis();
+  const redis = await getRedis(event);
   const existingJson = await redis.hget(redisKeys.accounts, id);
   if (!existingJson) throw createError({ statusCode: 404, message: "Account not found" });
 
@@ -36,7 +36,7 @@ export default eventHandler(async (event) => {
     ["HINCRBY", redisKeys.accountsMeta, "version", 1],
     ["HSET", redisKeys.accountsMeta, "updatedAt", now],
   ];
-  const results = await runTransaction(commands);
+  const results = await runTransaction(commands, event);
   const version = versionFromTransaction(results, commands, redisKeys.accountsMeta, "version");
   return { status: 200, message: "Updated successfully", version };
 });

@@ -4,7 +4,7 @@ export default eventHandler(async (event) => {
   const id = query.id as string | undefined;
   if (!id) throw createError({ statusCode: 400, message: "Missing id" });
 
-  const redis = await getRedis();
+  const redis = await getRedis(event);
   // Pre-check existence so failed/non-existent deletions don't corrupt version, count, or cache metadata
   const exists = redis.hexists
     ? (await redis.hexists(redisKeys.accounts, id)) === 1
@@ -19,7 +19,7 @@ export default eventHandler(async (event) => {
     ["HINCRBY", redisKeys.accountsMeta, "count", -1],
     ["HSET", redisKeys.accountsMeta, "updatedAt", new Date().toISOString()],
   ];
-  const results = await runTransaction(commands);
+  const results = await runTransaction(commands, event);
   const version = versionFromTransaction(results, commands, redisKeys.accountsMeta, "version");
   return { status: 200, message: "Deleted successfully", version };
 });

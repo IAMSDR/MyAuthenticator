@@ -1,10 +1,10 @@
 export default defineWebAuthnRegisterEventHandler({
   async storeChallenge(event, challenge, attemptId) {
-    const redis = await getRedis();
+    const redis = await getRedis(event);
     await redis.set(challengeKey(attemptId), challenge, { ex: 60 });
   },
-  async getChallenge(_event, attemptId) {
-    const redis = await getRedis();
+  async getChallenge(event, attemptId) {
+    const redis = await getRedis(event);
     const challenge = await redis.getdel(challengeKey(attemptId));
     if (!challenge) {
       throw createError({
@@ -15,8 +15,8 @@ export default defineWebAuthnRegisterEventHandler({
     return challenge;
   },
   // @ts-expect-error simplewebauthn v13 PRF client extension typing
-  async getOptions(_event) {
-    const redis = await getRedis();
+  async getOptions(event) {
+    const redis = await getRedis(event);
     const prfSalt = await redis.get(redisKeys.prfSalt);
     if (prfSalt) {
       const b64 = prfSalt.replace(/-/g, "+").replace(/_/g, "/");
@@ -35,7 +35,7 @@ export default defineWebAuthnRegisterEventHandler({
   },
   validateUser: (user) => passkeyUser.parseAsync(user),
   async onSuccess(event, { user, credential }) {
-    const redis = await getRedis();
+    const redis = await getRedis(event);
     // Check if device already registered by id in Hash
     const exists = redis.hexists
       ? (await redis.hexists(redisKeys.passkeys, credential.id)) === 1

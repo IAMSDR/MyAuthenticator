@@ -1,4 +1,5 @@
 import { Redis as UpstashRedis } from "@upstash/redis";
+import type { H3Event } from "h3";
 // NOTE: `ioredis` is Node-TCP only and pulls `node:string_decoder` / `node:net`
 // which have no Cloudflare Workers polyfill (unenv throws
 // "string_decoder.StringDecoder is not implemented yet").
@@ -165,8 +166,8 @@ async function createIORedisClient(redisUrl: string): Promise<RedisClient> {
 }
 
 // Shared helper: run an atomic transaction and return per-command results.
-export async function runTransaction(commands: [string, ...unknown[]][]): Promise<unknown[]> {
-  const redis = await getRedis();
+export async function runTransaction(commands: [string, ...unknown[]][], event?: H3Event): Promise<unknown[]> {
+  const redis = await getRedis(event);
   if (redis.multiExec) return await redis.multiExec(commands);
   // Fallback (no pipeline support): run sequentially.
   const results: unknown[] = [];
@@ -179,15 +180,15 @@ export async function runTransaction(commands: [string, ...unknown[]][]): Promis
 }
 
 // Atomic rate-limiting increment with conditional expiry on initial creation
-export async function incrWithExpire(key: string, seconds: number): Promise<number> {
-  const redis = await getRedis();
+export async function incrWithExpire(key: string, seconds: number, event?: H3Event): Promise<number> {
+  const redis = await getRedis(event);
   if (redis.incrWithExpire) {
     return await redis.incrWithExpire(key, seconds);
   }
   const results = await runTransaction([
     ["INCRBY", key, 1],
     ["EXPIRE", key, seconds, "NX"],
-  ]);
+  ], event);
   return Number(results[0]) || 1;
 }
 
@@ -207,47 +208,124 @@ export function versionFromTransaction(results: unknown[], commands: [string, ..
   return 0;
 }
 
-export async function getRedis(): Promise<RedisClient> {
+interface CloudflareEnv {
+  UPSTASH_REDIS_REST_URL?: string;
+  UPSTASH_REDIS_REST_TOKEN?: string;
+  KV_REST_API_URL?: string;
+  KV_REST_API_TOKEN?: string;
+  REDIS_URL?: string;
+  [key: string]: unknown;
+}
+
+interface CloudflareEventContext {
+  cloudflare?: { env?: CloudflareEnv };
+  _platform?: { cloudflare?: { env?: CloudflareEnv } };
+}
+
+function getCloudflareEnv(event?: H3Event): CloudflareEnv | undefined {
+  // Only read from globalThis.__env__ (set externally by Nitro or a startup hook).
+  // Never write request-scoped env to globalThis to avoid cross-request env leakage.
+  const globalObj = globalThis as unknown as { __env__?: CloudflareEnv };
+  if (!event) return globalObj.__env__;
+
+  const ctx = event.context as unknown as CloudflareEventContext | undefined;
+  return ctx?.cloudflare?.env || ctx?._platform?.cloudflare?.env || globalObj.__env__;
+}
+
+// Detect if we are actually running on Cloudflare Workers/Pages by checking
+// the event context (set by the Cloudflare preset) or the CF_PAGES env var.
+// We intentionally do NOT use the truthiness of `getCloudflareEnv()` because
+// its `globalThis.__env__` fallback can be set on Node.js runtimes too.
+function isCloudflareRuntime(event?: H3Event): boolean {
+  if (event) {
+    const ctx = event.context as unknown as CloudflareEventContext | undefined;
+    if (ctx?.cloudflare?.env || ctx?._platform?.cloudflare?.env) return true;
+  }
+  return Boolean(typeof process !== "undefined" && (process as unknown as { env?: Record<string, string> }).env?.CF_PAGES);
+}
+
+// Singleton Redis client. The first call to getRedis() determines which env
+// vars and credentials are used for the lifetime of this isolate/process.
+// The `event` parameter is used only to resolve Cloudflare Workers bindings
+// on that initial call; subsequent calls return the cached client regardless
+// of the event passed in. This is intentional: credentials are expected to
+// be stable across requests within the same isolate.
+export async function getRedis(event?: H3Event): Promise<RedisClient> {
   if (_redis) return _redis;
   if (_redisPromise) return _redisPromise;
 
-  _redisPromise = (async () => {
-    try {
-      const config = useRuntimeConfig();
-      const upstashUrl = (config.upstashRedisRestUrl as string) || process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || "";
-      const upstashToken = (config.upstashRedisRestToken as string) || process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "";
-      const redisUrl = (config.redisUrl as string) || process.env.REDIS_URL || "";
+  let config: Record<string, unknown> = {};
+  try {
+    config = (event ? useRuntimeConfig(event) : useRuntimeConfig()) as unknown as Record<string, unknown>;
+  } catch {
+    // Fallback when invoked outside Nitro request context
+  }
 
-      if (upstashUrl && upstashToken) {
-        _redis = createUpstashClient(upstashUrl, upstashToken);
-        return _redis;
+  const cfEnv = getCloudflareEnv(event);
+
+  const upstashUrl =
+    (cfEnv?.UPSTASH_REDIS_REST_URL as string | undefined) ||
+    (cfEnv?.KV_REST_API_URL as string | undefined) ||
+    (config.upstashRedisRestUrl as string | undefined) ||
+    (typeof process !== "undefined" ? process.env?.UPSTASH_REDIS_REST_URL || process.env?.KV_REST_API_URL : "") ||
+    "";
+
+  const upstashToken =
+    (cfEnv?.UPSTASH_REDIS_REST_TOKEN as string | undefined) ||
+    (cfEnv?.KV_REST_API_TOKEN as string | undefined) ||
+    (config.upstashRedisRestToken as string | undefined) ||
+    (typeof process !== "undefined" ? process.env?.UPSTASH_REDIS_REST_TOKEN || process.env?.KV_REST_API_TOKEN : "") ||
+    "";
+
+  const redisUrl =
+    (cfEnv?.REDIS_URL as string | undefined) ||
+    (config.redisUrl as string | undefined) ||
+    (typeof process !== "undefined" ? process.env?.REDIS_URL : "") ||
+    "";
+
+  if (upstashUrl && upstashToken) {
+    // Assign _redisPromise synchronously (same tick) so concurrent callers share this promise.
+    _redisPromise = (async () => {
+      try {
+        const client = createUpstashClient(upstashUrl, upstashToken);
+        _redis = client;
+        return client;
+      } catch (err) {
+        _redisPromise = null;
+        throw err;
       }
-      if (redisUrl) {
-        // IORedis is Node-only — on Cloudflare Workers this will throw with a clear
-        // message instead of the cryptic `string_decoder` unenv error.
-        if (typeof process !== "undefined" && (process as unknown as { env?: Record<string,string> }).env?.CF_PAGES) {
-          throw createError({ statusCode: 500, message: "REDIS_URL (ioredis) is not supported on Cloudflare Workers. Use UPSTASH_REDIS_REST_URL + TOKEN." });
-        }
-        _redis = await createIORedisClient(redisUrl);
-        return _redis;
-      }
-      // Fallback: try env upstash even if config empty (nitro runtime)
-      if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-        _redis = createUpstashClient(process.env.UPSTASH_REDIS_REST_URL, process.env.UPSTASH_REDIS_REST_TOKEN);
-        return _redis;
-      }
-      if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-        _redis = createUpstashClient(process.env.KV_REST_API_URL, process.env.KV_REST_API_TOKEN);
-        return _redis;
-      }
-      throw createError({ statusCode: 500, message: "Redis not configured. Set UPSTASH_REDIS_REST_URL+TOKEN or REDIS_URL" });
-    } catch (err) {
-      _redisPromise = null;
+    })();
+    return _redisPromise;
+  }
+
+  if (redisUrl) {
+    const isCloudflare = isCloudflareRuntime(event);
+    if (isCloudflare) {
+      const err = createError({
+        statusCode: 500,
+        message: "REDIS_URL (ioredis) is not supported on Cloudflare Workers. Use UPSTASH_REDIS_REST_URL + TOKEN.",
+      });
+      // Set _redisPromise so concurrent callers are deduplicated, then clear on rejection.
+      _redisPromise = Promise.reject(err);
+      _redisPromise.catch(() => { _redisPromise = null; });
       throw err;
     }
-  })();
 
-  return _redisPromise;
+    // Assign _redisPromise synchronously (same tick) so concurrent callers share this promise.
+    _redisPromise = (async () => {
+      try {
+        const client = await createIORedisClient(redisUrl);
+        _redis = client;
+        return client;
+      } catch (err) {
+        _redisPromise = null;
+        throw err;
+      }
+    })();
+    return _redisPromise;
+  }
+
+  throw createError({ statusCode: 500, message: "Redis not configured. Set UPSTASH_REDIS_REST_URL+TOKEN or REDIS_URL" });
 }
 
 // Helpers
@@ -272,8 +350,8 @@ export function challengeKey(attemptId: string) {
   return `${redisKeys.challengePrefix}${attemptId}`;
 }
 
-export async function getAccountsMeta() {
-  const redis = await getRedis();
+export async function getAccountsMeta(event?: H3Event) {
+  const redis = await getRedis(event);
   const meta = await redis.hgetall(redisKeys.accountsMeta);
   let actualCount = 0;
   try {

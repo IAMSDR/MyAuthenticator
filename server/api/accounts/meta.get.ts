@@ -1,7 +1,7 @@
 export default eventHandler(async (event) => {
   await requireUserSession(event);
-  const meta = await getAccountsMeta();
-  const redis = await getRedis();
+  const meta = await getAccountsMeta(event);
+  const redis = await getRedis(event);
   const rawOrder = await redis.get(redisKeys.accountsOrder);
   let order: string[] = [];
   if (rawOrder) {

@@ -5,7 +5,7 @@ export default eventHandler(async (event) => {
   const { data, error } = await readValidatedBody(event, (body) => changePasswordSchema.safeParse(body));
   if (error) throw createError({ statusCode: 400, statusMessage: "Validation Failed", message: error.message });
 
-  const redis = await getRedis();
+  const redis = await getRedis(event);
   // Strictly require and verify current password before allowing password or DEK change
   const existingHash = await redis.get(redisKeys.passwordHash);
   if (!existingHash) throw createError({ statusCode: 500, message: "Password hash missing" });
@@ -16,7 +16,7 @@ export default eventHandler(async (event) => {
   await runTransaction([
     ["SET", redisKeys.passwordHash, hash],
     ["SET", redisKeys.dekPassword, data.newWrappedDEK],
-  ]);
+  ], event);
 
   return { status: 200, message: "Password changed successfully" };
 });

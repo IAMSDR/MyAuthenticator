@@ -1,10 +1,10 @@
 export default defineWebAuthnAuthenticateEventHandler({
   async storeChallenge(event, challenge, attemptId) {
-    const redis = await getRedis();
+    const redis = await getRedis(event);
     await redis.set(challengeKey(attemptId), challenge, { ex: 60 });
   },
-  async getChallenge(_event, attemptId) {
-    const redis = await getRedis();
+  async getChallenge(event, attemptId) {
+    const redis = await getRedis(event);
     const challenge = await redis.getdel(challengeKey(attemptId));
     if (!challenge) {
       throw createError({
@@ -15,8 +15,8 @@ export default defineWebAuthnAuthenticateEventHandler({
     return challenge;
   },
   // @ts-expect-error simplewebauthn v13 PRF client extension typing
-  async getOptions(_event) {
-    const redis = await getRedis();
+  async getOptions(event) {
+    const redis = await getRedis(event);
     const prfSalt = await redis.get(redisKeys.prfSalt);
     if (prfSalt) {
       const b64 = prfSalt.replace(/-/g, "+").replace(/_/g, "/");
@@ -34,8 +34,8 @@ export default defineWebAuthnAuthenticateEventHandler({
     return {};
   },
   // @ts-expect-error simplewebauthn AuthenticatorTransport typing
-  async getCredential(_event, credentialID) {
-    const redis = await getRedis();
+  async getCredential(event, credentialID) {
+    const redis = await getRedis(event);
     const raw = await redis.hget(redisKeys.passkeys, credentialID);
     if (!raw) {
       throw createError({
@@ -48,7 +48,7 @@ export default defineWebAuthnAuthenticateEventHandler({
   },
   async onSuccess(event, { credential, authenticationInfo }: { credential?: { id?: string }; authenticationInfo?: { newCounter?: number } }) {
     if (credential?.id && authenticationInfo?.newCounter !== undefined) {
-      const redis = await getRedis();
+      const redis = await getRedis(event);
       const raw = await redis.hget(redisKeys.passkeys, credential.id);
       if (raw) {
         const passkey = JSON.parse(raw);

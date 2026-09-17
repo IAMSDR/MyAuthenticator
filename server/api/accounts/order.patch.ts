@@ -10,7 +10,7 @@ export default eventHandler(async (event) => {
     ["HINCRBY", redisKeys.accountsMeta, "version", 1],
     ["HSET", redisKeys.accountsMeta, "updatedAt", new Date().toISOString()],
   ];
-  const results = await runTransaction(commands);
+  const results = await runTransaction(commands, event);
   const version = versionFromTransaction(results, commands, redisKeys.accountsMeta, "version");
   return { status: 200, message: "Order updated", version };
 });
