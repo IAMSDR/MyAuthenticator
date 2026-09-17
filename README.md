@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://my-authenticator.pages.dev">
+  <a href="https://myauthenticator.pages.dev">
     <img src="https://img.shields.io/badge/Try_Live_Demo-0284c7?style=for-the-badge&amp;logo=cloudflarepages&amp;logoColor=white" alt="Try Live Demo" />
   </a>
   &nbsp;&nbsp;
@@ -213,7 +213,7 @@ Deploy and run MyAuthenticator as a production Node.js service on your own Linux
    Open `.env` and fill in:
    - `NUXT_SESSION_PASSWORD` — your random 32+ character string from [step 1](#1-prepare-your-credentials).
    - Redis database: set `REDIS_URL="redis://localhost:6379"` for local Redis, or your `UPSTASH_REDIS_REST_*` credentials.
-   - `PORT` — server port (the example uses `3000`).
+   - `PORT` — server port. Uncomment the `PORT` line in `.env` and set it to `3000` if you want to use the address below.
 
 3. **Build for production**
 
@@ -346,7 +346,7 @@ pnpm install
 cp .env.example .env
 ```
 
-Open `.env` and fill in your session secret and Upstash credentials. Leave `PORT=3000` if you want to use the address below.
+Open `.env` and fill in your session secret and Upstash credentials. Add `PORT=3000` if you want to use the address below.
 
 <details>
 <summary><strong>Using local Redis?</strong></summary>

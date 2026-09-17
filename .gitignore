@@ -23,4 +23,9 @@ logs
 .env.*
 !.env.example
 
+# Local wrangler secrets
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
 .wrangler

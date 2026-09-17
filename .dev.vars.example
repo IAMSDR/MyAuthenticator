@@ -1,0 +1,9 @@
+# Local secrets for `wrangler dev`. Copy to `.dev.vars` — never commit that file.
+
+# Session — required, ≥32 chars, env-only (not stored in Redis)
+# Generate with: openssl rand -hex 32
+NUXT_SESSION_PASSWORD=
+
+# Upstash REST (Cloudflare Workers require REST, not TCP)
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=

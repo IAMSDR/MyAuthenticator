@@ -16,13 +16,13 @@
   "cloudflare": {
     "bindings": {
       "NUXT_SESSION_PASSWORD": {
-        "description": "Session encryption key (>=32 chars). Generate with: openssl rand -hex 32"
+        "description": "Session encryption key (>=32 chars). Generate with `openssl rand -hex 32`."
       },
       "UPSTASH_REDIS_REST_URL": {
-        "description": "Upstash Redis REST URL (e.g. https://...upstash.io)"
+        "description": "Upstash Redis REST URL from your database (e.g. `https://...upstash.io`)."
       },
       "UPSTASH_REDIS_REST_TOKEN": {
-        "description": "Upstash Redis REST Token"
+        "description": "Upstash Redis **read/write** REST token from the same database."
       }
     }
   },
