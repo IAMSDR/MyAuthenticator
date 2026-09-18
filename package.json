@@ -2,6 +2,13 @@
   "name": "myauthenticator",
   "private": true,
   "type": "module",
+  "author": "IAMSDR",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IAMSDR/MyAuthenticator.git"
+  },
+  "homepage": "https://myauthenticator.pages.dev",
+  "license": "AGPL-3.0-only",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",

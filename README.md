@@ -69,7 +69,16 @@
 
 ## Deploy your own
 
-Deploy MyAuthenticator to the cloud or run it on your own server. Pick your preferred platform to get started:
+Deploy MyAuthenticator to the cloud or run it on your own server. Pick your preferred platform to get started.
+
+> [!IMPORTANT]
+> **Fork this repository before deploying.** Cloud deployments must be built from your own fork so you can pull in future updates.
+
+<p align="center">
+  <a href="https://github.com/IAMSDR/MyAuthenticator/fork">
+    <img src="https://img.shields.io/badge/Fork_this_repo-181717?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="Fork this repository" />
+  </a>
+</p>
 
 <p align="center">
   <a href="#cloudflare-workers">
@@ -89,7 +98,7 @@ Each instance manages its own encrypted vault and connects to a Redis database.
 
 You'll need:
 
-- A GitHub account to create your copy of the repository.
+- A GitHub account to **fork** this repository.
 - An [Upstash](https://console.upstash.com/) account for Redis (or local Redis for self-hosting).
 - An account for your target host: Cloudflare Workers, Vercel, or your own machine.
 
@@ -122,11 +131,18 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 
 #### Environment variables
 
-The deploy form will ask for these names and values. Paste each value without quotes:
+Both hosts need the same three variables. Paste each value without quotes:
 
 - **`NUXT_SESSION_PASSWORD`** — the random string you just generated. It must be at least 32 characters and is used to protect session cookies.
 - **`UPSTASH_REDIS_REST_URL`** — the HTTPS REST URL from your database, such as `https://your-database.upstash.io`.
 - **`UPSTASH_REDIS_REST_TOKEN`** — the read/write REST token from the same database.
+
+How you enter them depends on the host:
+
+- **Cloudflare Workers** — add them in **Settings → Variables & Secrets**.
+- **Vercel** — add them in **Project Settings → Environment Variables**.
+
+Both platform sections list the exact names to copy.
 
 The session secret stays in your server settings. You'll choose a separate password for opening your vault when you first use the app.
 
@@ -134,13 +150,26 @@ The session secret stays in your server settings. You'll choose a separate passw
 
 #### Cloudflare Workers
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/IAMSDR/MyAuthenticator)
+[![Fork this repository](https://img.shields.io/badge/1._Fork_this_repo-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/IAMSDR/MyAuthenticator/fork)
+[![Connect to Workers Builds](https://img.shields.io/badge/2._Connect_to_Workers_Builds-F38020?style=flat-square&logo=cloudflare&logoColor=white)](https://dash.cloudflare.com/?to=/:account/workers-and-pages)
 
-1. Click **Deploy to Cloudflare**, sign in, and connect your GitHub account.
-2. Choose a name for the new repository and Worker.
-3. Fill in the three [environment variables](#environment-variables) using your own values.
-4. If you're shown build settings, set the build command to `pnpm build:cloudflare` and the deploy command to `pnpm run deploy`.
-5. Click **Deploy**. When it's finished, open the `workers.dev` link and [create your vault](#3-create-your-vault).
+1. **Fork this repository** using the button above. Keep it as your own fork so you can pull updates later.
+2. Sign in to Cloudflare and go to **Workers & Pages**.
+3. Select **Create application** → **Get started** next to **Import a repository**.
+4. Under **Import a repository**, connect your GitHub account and select **your fork**.
+5. Configure the project. Add the three [environment variables](#environment-variables) in **Settings → Variables & Secrets** — use these exact names:
+
+   ```text
+   NUXT_SESSION_PASSWORD
+   UPSTASH_REDIS_REST_URL
+   UPSTASH_REDIS_REST_TOKEN
+   ```
+
+   Paste the corresponding value for each.
+6. Set the build command to `pnpm build:cloudflare` and the deploy command to `pnpm run deploy`.
+7. Select **Save and Deploy**. When the build finishes, open the `workers.dev` link and [create your vault](#3-create-your-vault).
+
+Every push to your fork — including when you [sync it with this repository](#keeping-your-deployment-updated) — triggers a new build and deploy automatically.
 
 <details>
 <summary><strong>Prefer using the command line?</strong></summary>
@@ -170,25 +199,34 @@ Once all three secrets are saved, open your Worker URL to set up the app.
 
 #### Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FIAMSDR%2FMyAuthenticator&env=NUXT_SESSION_PASSWORD,UPSTASH_REDIS_REST_URL,UPSTASH_REDIS_REST_TOKEN&envDescription=Required%20session%20secret%20and%20Upstash%20Redis%20credentials&envLink=https%3A%2F%2Fgithub.com%2FIAMSDR%2FMyAuthenticator%23environment-variables&project-name=myauthenticator&repository-name=myauthenticator)
+[![Fork this repository](https://img.shields.io/badge/1._Fork_this_repo-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/IAMSDR/MyAuthenticator/fork)
+[![Import to Vercel](https://img.shields.io/badge/2._Import_to_Vercel-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com/new)
 
-1. Click **Deploy with Vercel**, sign in, and connect your GitHub account.
-2. Choose a name for the cloned repository and project.
-3. Fill in the three [environment variables](#environment-variables) when prompted.
-4. Keep the detected **Nuxt** framework settings and click **Deploy**.
-5. When the deployment finishes, open the `vercel.app` link and [create your vault](#3-create-your-vault).
+1. **Fork this repository** using the button above. Keep it as your own fork so you can pull updates later.
+2. In Vercel, select **Add New** → **Project** and import **your fork** from GitHub.
+3. Use the repository root as the root directory and keep the detected **Nuxt** framework preset.
+4. Add the three [environment variables](#environment-variables) in **Project Settings → Environment Variables**. Vercel does not pre-fill the names, so add each one — use these exact names:
 
-<details>
-<summary><strong>Already forked the repository?</strong></summary>
+   ```text
+   NUXT_SESSION_PASSWORD
+   UPSTASH_REDIS_REST_URL
+   UPSTASH_REDIS_REST_TOKEN
+   ```
 
-1. Select your fork in [Vercel's New Project page](https://vercel.com/new).
-2. Use the repository root as the root directory and select the **Nuxt** framework preset.
-3. Add the three environment variables before deploying.
-4. Keep the framework's default output settings. If overriding commands, use `pnpm install --frozen-lockfile` to install and `pnpm build` to build.
+   Paste the corresponding value for each. See [step 1](#1-prepare-your-credentials) if you haven't created them yet.
+5. Select **Deploy**. When it finishes, open the `vercel.app` link and [create your vault](#3-create-your-vault).
 
 Nuxt detects Vercel automatically. If you change environment variables later, redeploy to pick up the new values.
 
-</details>
+Every push to your fork — including when you [sync it with this repository](#keeping-your-deployment-updated) — triggers a new deployment automatically.
+
+#### Keeping your deployment updated
+
+Because your deployment builds from **your fork**, you can pull in new releases, dependency updates, and security fixes at any time:
+
+1. Open your fork on GitHub.
+2. Above the file list, select **Sync fork** → **Update branch**.
+3. Cloudflare Workers Builds or Vercel detects the new commits and redeploys automatically.
 
 #### Self-Host (Node.js)
 
@@ -457,3 +495,5 @@ Found a bug or have an idea? [Open an issue](https://github.com/IAMSDR/MyAuthent
 ## License
 
 [GNU Affero General Public License v3.0 (AGPL-3.0)](https://www.gnu.org/licenses/agpl-3.0.en.html)
+
+Copyright (C) 2025 IAMSDR. This program is free software: you can redistribute it and/or modify it under the terms of the AGPL-3.0. Because it is licensed under the AGPL, anyone who runs a modified version as a network service must also make their source available under the same license.
