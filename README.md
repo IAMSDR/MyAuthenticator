@@ -81,8 +81,8 @@ Deploy MyAuthenticator to the cloud or run it on your own server. Pick your pref
 </p>
 
 <p align="center">
-  <a href="#cloudflare-workers">
-    <img src="https://img.shields.io/badge/Cloudflare_Workers-F38020?style=for-the-badge&amp;logo=cloudflare&amp;logoColor=white" alt="Deploy to Cloudflare Workers" />
+  <a href="#cloudflare-pages">
+    <img src="https://img.shields.io/badge/Cloudflare_Pages-F38020?style=for-the-badge&amp;logo=cloudflarepages&amp;logoColor=white" alt="Deploy to Cloudflare Pages" />
   </a>
   &nbsp;&nbsp;
   <a href="#vercel">
@@ -100,7 +100,7 @@ You'll need:
 
 - A GitHub account to **fork** this repository.
 - An [Upstash](https://console.upstash.com/) account for Redis (or local Redis for self-hosting).
-- An account for your target host: Cloudflare Workers, Vercel, or your own machine.
+- An account for your target host: Cloudflare Pages, Vercel, or your own machine.
 
 ### 1. Prepare your credentials
 
@@ -139,7 +139,7 @@ Both hosts need the same three variables. Paste each value without quotes:
 
 How you enter them depends on the host:
 
-- **Cloudflare Workers** — add them in **Settings → Variables & Secrets**.
+- **Cloudflare Pages** — add them in **Settings → Environment variables** (for both Production and Preview).
 - **Vercel** — add them in **Project Settings → Environment Variables**.
 
 Both platform sections list the exact names to copy.
@@ -148,16 +148,17 @@ The session secret stays in your server settings. You'll choose a separate passw
 
 ### 2. Choose your host
 
-#### Cloudflare Workers
+#### Cloudflare Pages
 
 [![Fork this repository](https://img.shields.io/badge/1._Fork_this_repo-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/IAMSDR/MyAuthenticator/fork)
-[![Connect to Workers Builds](https://img.shields.io/badge/2._Connect_to_Workers_Builds-F38020?style=flat-square&logo=cloudflare&logoColor=white)](https://dash.cloudflare.com/?to=/:account/workers-and-pages)
+[![Connect to Pages](https://img.shields.io/badge/2._Connect_to_Pages-F38020?style=flat-square&logo=cloudflarepages&logoColor=white)](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create/pages)
 
 1. **Fork this repository** using the button above. Keep it as your own fork so you can pull updates later.
 2. Sign in to Cloudflare and go to **Workers & Pages**.
-3. Select **Create application** → **Get started** next to **Import a repository**.
-4. Under **Import a repository**, connect your GitHub account and select **your fork**.
-5. Configure the project. Add the three [environment variables](#environment-variables) in **Settings → Variables & Secrets** — use these exact names:
+3. Select **Create application** → **Pages** → **Connect to Git**.
+4. Connect your GitHub account and select **your fork**. Choose the branch to build from (usually `main`).
+5. Cloudflare detects **Nuxt** and fills in the build command and build output directory for you. Keep the detected values — you don't need to enter them by hand.
+6. Add the three [environment variables](#environment-variables) in **Settings → Environment variables**. Add them for both **Production** and **Preview** — use these exact names:
 
    ```text
    NUXT_SESSION_PASSWORD
@@ -165,37 +166,13 @@ The session secret stays in your server settings. You'll choose a separate passw
    UPSTASH_REDIS_REST_TOKEN
    ```
 
-   Paste the corresponding value for each.
-6. Set the build command to `pnpm build:cloudflare` and the deploy command to `pnpm run deploy`.
-7. Select **Save and Deploy**. When the build finishes, open the `workers.dev` link and [create your vault](#3-create-your-vault).
+   Paste the corresponding value for each, then save.
+7. Select **Save and Deploy**. When the build finishes, open the `<your-project>.pages.dev` link and [create your vault](#3-create-your-vault).
 
-Every push to your fork — including when you [sync it with this repository](#keeping-your-deployment-updated) — triggers a new build and deploy automatically.
+Every push to your fork — including when you [sync it with this repository](#keeping-your-deployment-updated) — triggers a new Pages deployment automatically.
 
-<details>
-<summary><strong>Prefer using the command line?</strong></summary>
-
-Follow the clone and install steps in [Local development](#local-development), then run:
-
-```sh
-pnpm exec wrangler login
-pnpm run deploy
-```
-
-Wrangler builds the app using `wrangler.json`. To use a different Worker name, change `name` in that file before deploying.
-
-Keep `run` in `pnpm run deploy`: without it, pnpm calls its own unrelated `deploy` command.
-
-Once the Worker exists, add each secret. Paste its value when prompted:
-
-```sh
-pnpm exec wrangler secret put NUXT_SESSION_PASSWORD
-pnpm exec wrangler secret put UPSTASH_REDIS_REST_URL
-pnpm exec wrangler secret put UPSTASH_REDIS_REST_TOKEN
-```
-
-Once all three secrets are saved, open your Worker URL to set up the app.
-
-</details>
+> [!NOTE]
+> Cloudflare Pages runs the app on its Functions runtime. Use your Upstash **REST** credentials there; a TCP `REDIS_URL` isn't supported.
 
 #### Vercel
 
@@ -226,7 +203,7 @@ Because your deployment builds from **your fork**, you can pull in new releases,
 
 1. Open your fork on GitHub.
 2. Above the file list, select **Sync fork** → **Update branch**.
-3. Cloudflare Workers Builds or Vercel detects the new commits and redeploys automatically.
+3. Cloudflare Pages or Vercel detects the new commits and redeploys automatically.
 
 #### Self-Host (Node.js)
 
@@ -397,7 +374,7 @@ REDIS_URL="redis://localhost:6379"
 
 Keep `NUXT_SESSION_PASSWORD` and `PORT`. If both Upstash credentials and `REDIS_URL` are set, the app chooses Upstash.
 
-This works with the Node.js server. For Cloudflare Workers, use Upstash's REST credentials.
+This works with the Node.js server. On Cloudflare Pages, use Upstash's REST credentials.
 
 </details>
 
@@ -416,8 +393,7 @@ Open **[http://localhost:3000](http://localhost:3000)** and [create your vault](
 
 - `pnpm build` builds for Node.js locally, or for the hosting platform Nuxt detects.
 - `pnpm preview` runs a local preview after `pnpm build` and loads your `.env` file.
-- `pnpm build:cloudflare` builds for Cloudflare Workers.
-- `pnpm run deploy` builds and deploys to Cloudflare with Wrangler.
+- `pnpm build:cloudflare` builds the Cloudflare output used by Cloudflare Pages.
 - `pnpm lint` runs ESLint.
 
 **Optional environment variables**
@@ -468,9 +444,9 @@ Here's what the app encrypts and what the server stores:
 
   Check that `NUXT_SESSION_PASSWORD` is at least 32 characters. Restart the local server or redeploy after changing it.
 
-- **Cloudflare build or Redis TCP errors**
+- **Cloudflare Pages build or Redis TCP errors**
 
-  Use `pnpm build:cloudflare` for the build and Upstash REST credentials for the database.
+  Cloudflare Pages builds the app with its Cloudflare runtime preset. Use Upstash **REST** credentials for the database there — a TCP `REDIS_URL` isn't supported on Pages.
 
 - **Camera, passkeys, or encryption aren't working**
 
