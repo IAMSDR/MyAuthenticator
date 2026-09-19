@@ -111,7 +111,10 @@ function createUpstashClient(url: string, token: string): RedisClient {
 
 async function createIORedisClient(redisUrl: string): Promise<RedisClient> {
   const IORedis = await getIORedisCtor();
-  const client = new IORedis(redisUrl, { maxRetriesPerRequest: 3, lazyConnect: false });
+  // ioredis v6 switched the default wire protocol to RESP3, which changes some
+  // reply shapes (e.g. hgetall/multi/scan). This client is written against the
+  // RESP2 shapes, so pin protocol 2 to keep behaviour identical to ioredis v5.
+  const client = new IORedis(redisUrl, { maxRetriesPerRequest: 3, lazyConnect: false, protocol: 2 });
   _isUpstash = false;
   return {
     get: (key) => client.get(key),

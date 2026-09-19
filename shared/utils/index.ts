@@ -226,7 +226,7 @@ export const extractAccountsFromUriList = async (
 
     const isHotp = otpObj instanceof OTPAuth.HOTP || cleanUri.startsWith("otpauth://hotp/");
     const candidate: Account = {
-      type: isHotp ? otpSchema.Values.HOTP : otpSchema.Values.TOTP,
+      type: isHotp ? otpSchema.enum.HOTP : otpSchema.enum.TOTP,
       issuer: otpObj.issuer || "",
       label: otpObj.label || "Unnamed",
       icon,
@@ -290,16 +290,16 @@ export const extractAccountsFromGoogleUri = async (uri: string) => {
     const type =
       otp.type > 0
         ? otp.type === 1
-          ? otpSchema.Values.HOTP
-          : otpSchema.Values.TOTP
+          ? otpSchema.enum.HOTP
+          : otpSchema.enum.TOTP
         : undefined;
     const algorithm = otp.algorithm
       ? {
           [-1]: undefined,
           0: undefined,
-          1: algorithmSchema.Values.SHA1,
-          2: algorithmSchema.Values.SHA256,
-          3: algorithmSchema.Values.SHA512,
+          1: algorithmSchema.enum.SHA1,
+          2: algorithmSchema.enum.SHA256,
+          3: algorithmSchema.enum.SHA512,
           4: undefined,
         }[otp.algorithm]
       : undefined;

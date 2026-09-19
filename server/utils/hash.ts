@@ -1,4 +1,4 @@
-// @ts-expect-error bcryptjs lacks type declarations in current dependencies
+// bcryptjs v3 ships its own TypeScript declarations, so no ts-expect-error is needed.
 import bcrypt from "bcryptjs";
 
 const SALT_ROUNDS = 12;

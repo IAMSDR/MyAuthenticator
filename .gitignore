@@ -29,3 +29,5 @@ logs
 !.dev.vars.example
 
 .wrangler
+# e2e artifacts
+e2e/screenshot-*.png

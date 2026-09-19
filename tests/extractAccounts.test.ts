@@ -101,7 +101,10 @@ describe("extractAccountsFromUriList", () => {
     expect(result.skipped[0].reason).toContain("Not an otpauth:// URI");
 
     expect(result.skipped[1].line).toBe(3);
-    expect(result.skipped[1].reason).toContain("less than or equal to 8");
+    // zod v3 worded this "less than or equal to 8"; zod v4 says "Too big: expected number to be <=8".
+    // Assert on the stable signal (the rejected bound) rather than an exact version-specific phrase.
+    expect(result.skipped[1].reason).toMatch(/8/);
+    expect(result.skipped[1].reason.toLowerCase()).toMatch(/big|less than or equal/);
 
     expect(result.skipped[2].line).toBe(5);
     expect(result.skipped[2].reason).toBeTruthy();
