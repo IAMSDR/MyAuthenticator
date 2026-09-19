@@ -19,13 +19,17 @@ export default defineWebAuthnAuthenticateEventHandler({
     const redis = await getRedis(event);
     const prfSalt = await redis.get(redisKeys.prfSalt);
     if (prfSalt) {
-      const b64 = prfSalt.replace(/-/g, "+").replace(/_/g, "/");
-      const prfBytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
+      // NOTE: `first` MUST be a base64url string here, not an ArrayBuffer.
+      // These options are serialized to JSON over HTTP; an ArrayBuffer would
+      // become `{}` and browsers reject it with a TypeError
+      // ("The provided value is not of type '(ArrayBuffer or ArrayBufferView)'").
+      // The client decodes this back into bytes before calling WebAuthn.
+      // See: https://w3c.github.io/webauthn/#dom-authenticationextensionsprfvaluesjson-first
       return {
         extensions: {
           prf: {
             eval: {
-              first: prfBytes,
+              first: toBase64URL(prfSalt),
             },
           },
         },

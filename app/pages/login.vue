@@ -4,6 +4,7 @@ import { toast } from "@steveyuowo/vue-hot-toast";
 import { set } from "idb-keyval";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { isNetworkError, offlineMessage, onlineNow } from "~/utils/offline";
+import { normalizePrfExtension, getPrfResultBytes } from "~/utils/webauthn";
 import BackgroundGlow from "~/components/BackgroundGlow.vue";
 
 const { fetch: refreshSession } = useUserSession();
@@ -35,11 +36,11 @@ const loginWithPasskey = async () => {
 
     // 2. Perform WebAuthn authentication via @simplewebauthn/browser
     const assertionResponse = await startAuthentication({
-      optionsJSON: requestOptions,
+      optionsJSON: normalizePrfExtension(requestOptions),
     });
 
     const credentialId = assertionResponse.id;
-    const prfResult = assertionResponse.clientExtensionResults?.prf?.results?.first;
+    const prfBytes = getPrfResultBytes(assertionResponse.clientExtensionResults);
 
     // 3. Verify assertion on server
     const verificationResponse = await $fetch<{ verified: boolean }>("/api/webauthn/authenticate", {
@@ -70,7 +71,7 @@ const loginWithPasskey = async () => {
       return;
     }
 
-    if (!prfResult) {
+    if (!prfBytes) {
       if (onlineNow()) await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
       toast.update(id, {
         message: "Authenticator did not return PRF secret. Enter password to unlock vault.",
@@ -79,7 +80,6 @@ const loginWithPasskey = async () => {
       return;
     }
 
-    const prfBytes = new Uint8Array(prfResult);
     const prfKey = await importKeyFromBytes(prfBytes);
     const b64DEK = await decryptWithKey(wrappedData.wrappedDEK, prfKey);
     const dek = await importKeyFromBase64(b64DEK);

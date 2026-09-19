@@ -5,6 +5,7 @@ import type { TableColumn } from "@nuxt/ui";
 import { toast } from "@steveyuowo/vue-hot-toast";
 import { startRegistration } from "@simplewebauthn/browser";
 import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
+import { normalizePrfExtension, getPrfResultBytes } from "~/utils/webauthn";
 
 const UButton = resolveComponent("UButton");
 
@@ -70,7 +71,7 @@ const addPasskey = async () => {
 
     // 2. Perform WebAuthn ceremony directly with @simplewebauthn/browser to receive full clientExtensionResults
     const attestationResponse = await startRegistration({
-      optionsJSON: creationOptions,
+      optionsJSON: normalizePrfExtension(creationOptions),
     });
 
     createdCredId = attestationResponse.id;
@@ -91,11 +92,10 @@ const addPasskey = async () => {
     }
 
     const { dek } = useEncryption();
-    const prfResult = attestationResponse.clientExtensionResults?.prf?.results?.first;
+    const prfBytes = getPrfResultBytes(attestationResponse.clientExtensionResults);
 
-    if (prfResult && dek.value && createdCredId) {
+    if (prfBytes && dek.value && createdCredId) {
       // Authenticator supports PRF: generate and store DEK wrapper
-      const prfBytes = new Uint8Array(prfResult);
       const prfKey = await importKeyFromBytes(prfBytes);
       const b64DEK = await exportKeyToBase64(dek.value);
       const wrapped = await encryptWithKey(b64DEK, prfKey);
