@@ -1,0 +1,41 @@
+name: Dependency audit
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Every Monday at 06:00 UTC, so newly published advisories are caught
+    # even when no code changes land.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: pnpm audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Fails the job on high or critical advisories.
+      # Medium/low findings are still reported in the log but do not block.
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=high

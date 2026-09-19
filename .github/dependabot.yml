@@ -1,0 +1,46 @@
+version: 2
+
+updates:
+  # Keep JavaScript/TypeScript dependencies current.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
+    groups:
+      # One PR for all routine (minor + patch) updates...
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+      # ...and one PR for security fixes.
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    # Major bumps are intentionally left ungrouped so each gets its own PR
+    # and can be reviewed in isolation.
+
+  # Keep GitHub Actions used by our workflows current.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      actions:
+        patterns:
+          - "*"
