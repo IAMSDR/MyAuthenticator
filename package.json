@@ -38,7 +38,7 @@
     "@iconify-json/lucide": "^1.2.128",
     "@nuxt/ui": "^4.11.0",
     "@simplewebauthn/browser": "^13.1.0",
-    "@simplewebauthn/server": "^13.1.1",
+    "@simplewebauthn/server": "^13.3.2",
     "@steveyuowo/vue-hot-toast": "^1.3.2",
     "@upstash/redis": "^1.34.0",
     "@vueuse/nuxt": "14.4.0",
