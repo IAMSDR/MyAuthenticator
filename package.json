@@ -35,38 +35,39 @@
     }
   },
   "dependencies": {
-    "@iconify-json/lucide": "^1.2.128",
-    "@nuxt/ui": "^4.11.0",
-    "@simplewebauthn/browser": "^13.1.0",
-    "@simplewebauthn/server": "^13.3.2",
-    "@steveyuowo/vue-hot-toast": "^1.3.2",
-    "@upstash/redis": "^1.34.0",
-    "@vueuse/nuxt": "14.4.0",
-    "bcryptjs": "^2.4.3",
+    "@iconify-json/lucide": "^1.2.134",
+    "@nuxt/ui": "^4.11.1",
+    "@simplewebauthn/browser": "^14.0.0",
+    "@simplewebauthn/server": "^14.0.2",
+    "@steveyuowo/vue-hot-toast": "^1.4.3",
+    "@upstash/redis": "^1.38.4",
+    "@vueuse/nuxt": "15.0.0",
+    "bcryptjs": "^3.0.3",
     "idb-keyval": "^6.2.1",
-    "ioredis": "^5.4.1",
-    "long": "^5.3.1",
+    "ioredis": "^6.0.0",
+    "long": "^5.3.2",
     "nuxt": "^4.5.2",
     "nuxt-auth-utils": "0.5.30",
-    "otpauth": "^9.3.6",
-    "protobufjs": "^7.6.3",
-    "qrcode.vue": "^3.6.0",
+    "otpauth": "^9.5.2",
+    "protobufjs": "^8.8.0",
+    "qrcode.vue": "^3.11.0",
     "reflect-metadata": "^0.2.2",
     "tailwindcss": "^4.3.3",
     "uncrypto": "^0.1.3",
-    "vite": "^8.2.2",
-    "vue": "^3.5.42",
-    "vue-qrcode-reader": "^5.7.1",
-    "zod": "^3.24.2"
+    "vite": "^8.3.0",
+    "vue": "^3.5.43",
+    "vue-qrcode-reader": "^5.7.3",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@nuxt/devtools": "^3.4.2",
     "@nuxt/eslint": "^1.17.0",
     "@vite-pwa/nuxt": "1.1.1",
-    "eslint": "^10.9.1",
-    "typescript": "^5.8.2",
+    "eslint": "^10.11.0",
+    "typescript": "^6.0.3",
     "vitest": "^5.0.1",
-    "wrangler": "^4.14.0"
+    "wrangler": "^4.14.0",
+    "ws": "^8.21.3"
   },
   "pnpm": {
     "overrides": {
@@ -91,7 +92,8 @@
       "@protobufjs/utf8": "^1.1.1",
       "@babel/plugin-transform-modules-systemjs": "^7.29.4",
       "postcss-selector-parser@^7": "^7.1.5",
-      "esbuild": "^0.28.1"
+      "esbuild": "^0.28.1",
+      "ajv@^8": "^8.20.0"
     }
   },
   "packageManager": "pnpm@9.15.1+sha512.1acb565e6193efbebda772702950469150cf12bcc764262e7587e71d19dc98a423dff9536e57ea44c49bdf790ff694e83c27be5faa23d67e0c033b583be4bfcf"
