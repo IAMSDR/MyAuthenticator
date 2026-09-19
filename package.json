@@ -49,7 +49,7 @@
     "nuxt": "^4.5.2",
     "nuxt-auth-utils": "0.5.30",
     "otpauth": "^9.3.6",
-    "protobufjs": "^7.6.3",
+    "protobufjs": "^8.8.0",
     "qrcode.vue": "^3.6.0",
     "reflect-metadata": "^0.2.2",
     "tailwindcss": "^4.3.3",
