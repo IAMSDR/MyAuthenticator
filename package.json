@@ -64,7 +64,7 @@
     "@nuxt/eslint": "^1.17.0",
     "@vite-pwa/nuxt": "1.1.1",
     "eslint": "^10.9.1",
-    "typescript": "^5.8.2",
+    "typescript": "^6.0.3",
     "vitest": "^5.0.1",
     "wrangler": "^4.14.0"
   },
