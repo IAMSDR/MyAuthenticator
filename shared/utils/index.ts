@@ -5,6 +5,37 @@ import {
   getCachedIconSearch,
   setCachedIconSearch,
 } from "./iconCache";
+import { defaultIcon } from "./constants";
+import {
+  accountSchema,
+  algorithmSchema,
+  otpSchema,
+  type Account,
+  type Accounts,
+} from "../types";
+
+export interface SkippedAccount {
+  line: number;
+  label: string;
+  reason: string;
+  uri?: string;
+}
+
+export interface ExtractResult {
+  accounts: Account[];
+  skipped: SkippedAccount[];
+}
+
+export type ExtractProgressCallback = (progress: {
+  current: number;
+  total: number;
+  account?: Account;
+  skipped?: SkippedAccount;
+}) => void | Promise<void>;
+
+export const maskUriSecret = (uri: string): string => {
+  return uri.replace(/([?&])secret=[^&]+/i, "$1secret=***");
+};
 
 const toIconEntry = (icon: string) => {
   const parts = icon.split(":");
@@ -105,40 +136,145 @@ export const matchIcon = async (query: string) => {
   return defaultIcon;
 };
 
-export const extractAccountsFromUriList = async (uriList: string[]) => {
-  const accounts: Accounts = [];
-  for (const uri of uriList) {
-    let account: OTPAuth.HOTP | OTPAuth.TOTP;
-    try {
-      account = OTPAuth.URI.parse(uri);
-    } catch {
-      return;
+export const extractAccountsFromUriList = async (
+  uriList: string[],
+  onProgress?: ExtractProgressCallback
+): Promise<ExtractResult> => {
+  const accounts: Account[] = [];
+  const skipped: SkippedAccount[] = [];
+  const total = uriList.length;
+
+  for (let i = 0; i < uriList.length; i++) {
+    const rawLine = uriList[i];
+    const lineNum = i + 1;
+    const trimmed = rawLine ? rawLine.trim() : "";
+
+    // Skip blank lines and comments
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
     }
-    const url = new URL(uri);
-    const period = url.searchParams.get("period") ?? "30";
-    const counter = url.searchParams.get("counter") ?? "0";
-    accounts.push({
-      type: uri.includes("totp")
-        ? otpSchema.Values.TOTP
-        : otpSchema.Values.HOTP,
-      issuer: account.issuer,
-      label: account.label,
-      icon: await matchIcon(account.issuer),
-      secret: account.secret.base32,
-      algorithm: algorithmSchema.parse(account.algorithm),
-      digits: account.digits,
-      period: parseInt(period),
-      counter: parseInt(counter),
-    });
+
+    if (!trimmed.startsWith("otpauth://")) {
+      const skippedItem: SkippedAccount = {
+        line: lineNum,
+        label: trimmed.slice(0, 30),
+        reason: "Not an otpauth:// URI",
+        uri: maskUriSecret(trimmed),
+      };
+      skipped.push(skippedItem);
+      if (onProgress) {
+        await onProgress({
+          current: lineNum,
+          total,
+          skipped: skippedItem,
+        });
+      }
+      continue;
+    }
+
+    // Lenient preprocessing for common authenticators' formatting variations
+    const cleanUri = trimmed
+      // Normalize sha-1, SHA-256, etc.
+      .replace(/([?&]algorithm=)sha-?(\d+)/gi, "$1SHA$2")
+      // Remove spaces, dashes, or pluses from secret parameter (handling URL encoding like %20)
+      .replace(/([?&]secret=)([^&]+)/i, (_, prefix, val) => {
+        try {
+          return prefix + decodeURIComponent(val).replace(/[\s\-_+]/g, "");
+        } catch {
+          return prefix + val.replace(/[\s\-_+]/g, "");
+        }
+      });
+
+    let otpObj: OTPAuth.HOTP | OTPAuth.TOTP;
+    let parsedUrl: URL;
+
+    try {
+      parsedUrl = new URL(cleanUri);
+      otpObj = OTPAuth.URI.parse(cleanUri);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : "Malformed OTPAuth URI";
+      const skippedItem: SkippedAccount = {
+        line: lineNum,
+        label: cleanUri.slice(0, 40),
+        reason,
+        uri: maskUriSecret(cleanUri),
+      };
+      skipped.push(skippedItem);
+      if (onProgress) {
+        await onProgress({
+          current: lineNum,
+          total,
+          skipped: skippedItem,
+        });
+      }
+      continue;
+    }
+
+    const periodStr = parsedUrl.searchParams.get("period") ?? "30";
+    const counterStr = parsedUrl.searchParams.get("counter") ?? "0";
+    const period = parseInt(periodStr, 10);
+    const counter = parseInt(counterStr, 10);
+
+    let alg: "SHA1" | "SHA256" | "SHA512" = "SHA1";
+    const algParsed = algorithmSchema.safeParse(otpObj.algorithm?.toUpperCase());
+    if (algParsed.success) {
+      alg = algParsed.data;
+    }
+
+    const iconQuery = otpObj.issuer || otpObj.label || "";
+    const icon = await matchIcon(iconQuery);
+
+    const isHotp = otpObj instanceof OTPAuth.HOTP || cleanUri.startsWith("otpauth://hotp/");
+    const candidate: Account = {
+      type: isHotp ? otpSchema.Values.HOTP : otpSchema.Values.TOTP,
+      issuer: otpObj.issuer || "",
+      label: otpObj.label || "Unnamed",
+      icon,
+      secret: otpObj.secret?.base32 || "",
+      algorithm: alg,
+      digits: otpObj.digits,
+      period: isNaN(period) ? 30 : period,
+      counter: isNaN(counter) ? 0 : counter,
+    };
+
+    const validation = accountSchema.safeParse(candidate);
+    if (!validation.success) {
+      const reason = validation.error.issues.map((iss) => iss.message).join(", ") || "Validation failed";
+      const skippedItem: SkippedAccount = {
+        line: lineNum,
+        label: candidate.label || candidate.issuer || `Line ${lineNum}`,
+        reason,
+        uri: maskUriSecret(cleanUri),
+      };
+      skipped.push(skippedItem);
+      if (onProgress) {
+        await onProgress({
+          current: lineNum,
+          total,
+          skipped: skippedItem,
+        });
+      }
+      continue;
+    }
+
+    accounts.push(validation.data);
+    if (onProgress) {
+      await onProgress({
+        current: lineNum,
+        total,
+        account: validation.data,
+      });
+    }
   }
-  return accounts;
+
+  return { accounts, skipped };
 };
 
 export const extractAccountsFromGoogleUri = async (uri: string) => {
   const url = new URL(uri);
   const data = url.searchParams.get("data");
   if (!data) return;
-  let otpParameters: Payload_OtpParameters[] = [];
+  let otpParameters: Payload_OtpParameters[];
   try {
     const payload = Payload.decode(
       Uint8Array.from(atob(data), (c) => c.charCodeAt(0)),
