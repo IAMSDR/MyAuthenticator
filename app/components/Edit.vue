@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AdaptiveModal from "./AdaptiveModal.vue";
 import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
-import { toast } from "@steveyuowo/vue-hot-toast";
+import { toast } from "~/utils/toast";
 import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
 const props = defineProps<{ account: AccountEdit; accountId: string }>();
@@ -41,17 +41,11 @@ async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
     body: event.data,
   })
     .then(async (res) => {
-      toast.update(toastid, {
-        message: res.message || "Updated successfully",
-        type: "success",
-      });
+      toast.success(res.message || "Updated successfully", { id: toastid });
       await updateCachedAccountFields(props.accountId, event.data, res.version);
     })
     .catch(async (err) => {
-      toast.update(toastid, {
-        message: getWriteErrorMessage(err, "save changes"),
-        type: "error",
-      });
+      toast.error(getWriteErrorMessage(err, "save changes"), { id: toastid });
       // Rollback only affected account on failure
       if (accountsData.value && prevAccount) {
         accountsData.value = accountsData.value.map((acc) =>

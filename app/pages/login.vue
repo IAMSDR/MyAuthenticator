@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
-import { toast } from "@steveyuowo/vue-hot-toast";
+import { toast } from "~/utils/toast";
 import { set } from "idb-keyval";
 import { startAuthentication } from "@simplewebauthn/browser";
 import { isNetworkError, offlineMessage, onlineNow } from "~/utils/offline";
@@ -60,23 +60,17 @@ const loginWithPasskey = async () => {
     let wrappedData: { wrappedDEK: string };
     try {
       wrappedData = await $fetch(`/api/webauthn/wrap?credentialId=${encodeURIComponent(credentialId)}`);
-    } catch (e: any) {
+    } catch {
       // Passkey exists for authentication, but has no DEK wrapper (registered without PRF)
       // Logout session so user is not stuck in half-authenticated state without DEK
       if (onlineNow()) await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-      toast.update(id, {
-        message: "Passkey authenticated, but cannot unlock vault. Enter password to unlock.",
-        type: "error",
-      });
+      toast.error("Passkey authenticated, but cannot unlock vault. Enter password to unlock.", { id });
       return;
     }
 
     if (!prfBytes) {
       if (onlineNow()) await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-      toast.update(id, {
-        message: "Authenticator did not return PRF secret. Enter password to unlock vault.",
-        type: "error",
-      });
+      toast.error("Authenticator did not return PRF secret. Enter password to unlock vault.", { id });
       return;
     }
 
@@ -87,10 +81,10 @@ const loginWithPasskey = async () => {
     await set(`wrappedDEK:prf:${credentialId}`, wrappedData.wrappedDEK);
     setOfflineState(false);
     await refreshSession();
-    toast.update(id, { message: "Passkey login successful", type: "success" });
+    toast.success("Passkey login successful", { id });
     await navigateTo("/");
   } catch (e: any) {
-    toast.update(id, { message: e?.data?.message ?? String(e), type: "error" });
+    toast.error(e?.data?.message ?? (e instanceof Error ? e.message : String(e)), { id });
   } finally {
     loading.value = false;
   }
@@ -105,11 +99,11 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
       const ok = await unlockWithPassword(event.data.password);
       if (ok) {
         setOfflineState(true);
-        toast.update(toastid, { message: "Unlocked offline", type: "success" });
+        toast.success("Unlocked offline", { id: toastid });
         await navigateTo("/");
         return;
       }
-      toast.update(toastid, { message: "Incorrect password or no cached vault data.", type: "error" });
+      toast.error("Incorrect password or no cached vault data.", { id: toastid });
       return;
     }
 
@@ -124,14 +118,11 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
         const ok = await unlockWithPassword(event.data.password);
         if (ok) {
           setOfflineState(true);
-          toast.update(toastid, { message: "Unlocked offline", type: "success" });
+          toast.success("Unlocked offline", { id: toastid });
           await navigateTo("/");
           return;
         }
-        toast.update(toastid, {
-          message: offlineMessage("log in"),
-          type: "error",
-        });
+        toast.error(offlineMessage("log in"), { id: toastid });
         return;
       }
       throw fetchErr;
@@ -147,16 +138,13 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
     }
     setOfflineState(false);
     await refreshSession();
-    toast.update(toastid, {
-      message: res.message,
-      type: "success",
-    });
+    toast.success(res.message, { id: toastid });
     await navigateTo("/");
   } catch (e: any) {
-    toast.update(toastid, {
-      message: e?.data?.message ?? (e instanceof Error ? e.message : String(e)),
-      type: "error",
-    });
+    toast.error(
+      e?.data?.message ?? (e instanceof Error ? e.message : String(e)),
+      { id: toastid },
+    );
   } finally {
     loading.value = false;
   }

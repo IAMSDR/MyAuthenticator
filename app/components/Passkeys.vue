@@ -2,7 +2,7 @@
 import AdaptiveModal from "./AdaptiveModal.vue";
 import { h } from "vue";
 import type { TableColumn } from "@nuxt/ui";
-import { toast } from "@steveyuowo/vue-hot-toast";
+import { toast } from "~/utils/toast";
 import { startRegistration } from "@simplewebauthn/browser";
 import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 import { normalizePrfExtension, getPrfResultBytes } from "~/utils/webauthn";
@@ -141,18 +141,12 @@ const deletePasskey = async (id: string) => {
     query: { id: id },
   })
     .then(async (res) => {
-      toast.update(toastid, {
-        message: (res as any).message,
-        type: "success",
-      });
+      toast.success((res as any).message, { id: toastid });
       if (onlineNow()) await refreshNuxtData("passkeys");
     })
     .catch((err: any) => {
       console.error(err);
-      toast.update(toastid, {
-        message: getWriteErrorMessage(err, "manage passkeys"),
-        type: "error",
-      });
+      toast.error(getWriteErrorMessage(err, "manage passkeys"), { id: toastid });
     });
 };
 </script>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AdaptiveModal from "./AdaptiveModal.vue";
 import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
-import { toast } from "@steveyuowo/vue-hot-toast";
+import { toast } from "~/utils/toast";
 import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
 const emit = defineEmits(["close"]);
@@ -80,17 +80,11 @@ async function addAccount(event: FormSubmitEvent<Account>) {
     body: [cipherAccount],
   })
     .then(async (res) => {
-      toast.update(toastid, {
-        message: res.message || "Added successfully",
-        type: "success",
-      });
+      toast.success(res.message || "Added successfully", { id: toastid });
       await upsertCachedAccounts([cipherAccount], res.version, now);
     })
     .catch(async (err) => {
-      toast.update(toastid, {
-        message: getWriteErrorMessage(err, "save this authenticator"),
-        type: "error",
-      });
+      toast.error(getWriteErrorMessage(err, "save this authenticator"), { id: toastid });
       // Rollback on failure
       if (accountsData.value) {
         accountsData.value = accountsData.value.filter((a) => a.id !== cipherAccount.id);

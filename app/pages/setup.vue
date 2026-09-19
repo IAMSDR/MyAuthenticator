@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { toast } from "@steveyuowo/vue-hot-toast";
+import { toast } from "~/utils/toast";
 import { set } from "idb-keyval";
 import BackgroundGlow from "~/components/BackgroundGlow.vue";
 import AdaptiveModal from "~/components/AdaptiveModal.vue";
@@ -71,11 +71,11 @@ const onConfirm = async () => {
     } catch {
       // Local cache write failed, but server account creation succeeded
     }
-    toast.update(id, { message: "Account created", type: "success" });
+    toast.success("Account created", { id });
     showConfirmModal.value = false;
     await navigateTo("/");
   } catch (e: unknown) {
-    toast.update(id, { message: getWriteErrorMessage(e, "create account"), type: "error" });
+    toast.error(getWriteErrorMessage(e, "create account"), { id });
   } finally {
     loading.value = false;
   }

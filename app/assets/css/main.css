@@ -25,29 +25,6 @@ body {
   @apply flex justify-center items-center;
 }
 
-/* toast styling */
-.VueHotToast__toast {
-  @apply !text-sm !px-3 !py-2 !rounded-md !shadow-md;
-}
-
-/*
- * @steveyuowo/vue-hot-toast >= 1.4.0 removed `.VueHotToast__icon { margin-right: 12px }`
- * and instead applies `.VueHotToast__toast .content { margin: 4px 10px }`, which leaves
- * the icon flush against the left edge and produces uneven icon/text/dismiss spacing.
- * Restore the balanced spacing used by 1.3.x.
- */
-.VueHotToast__toast .content {
-  margin: 0 0 0 8px;
-}
-
-.VueHotToast__icon {
-  margin-right: 8px;
-}
-
-.VueHotToast__toast .content:last-child {
-  margin-right: 0;
-}
-
 /* slide transitions */
 .slide-enter-active,
 .slide-leave-active,

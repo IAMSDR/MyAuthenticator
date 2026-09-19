@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AdaptiveModal from "./AdaptiveModal.vue";
-import { toast } from "@steveyuowo/vue-hot-toast";
+import { toast } from "~/utils/toast";
 import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 import type { SkippedAccount } from "../../shared/utils";
 import {
@@ -85,16 +85,13 @@ const downloadEncryptedBackupFile = async () => {
   loading.value = true;
   const raw = useNuxtData<CipherAccount[]>("accounts");
   if (!raw.data.value?.length) {
-    toast.update(toastId, {
-      message: "No accounts to backup",
-      type: "error",
-    });
+    toast.error("No accounts to backup", { id: toastId });
     loading.value = false;
     return;
   }
   const { dek, decryptAccounts } = useEncryption();
   if (!dek.value) {
-    toast.update(toastId, { message: "Vault locked", type: "error" });
+    toast.error("Vault locked", { id: toastId });
     loading.value = false;
     return;
   }
@@ -102,7 +99,7 @@ const downloadEncryptedBackupFile = async () => {
   try {
     plain = await decryptAccounts(raw.data.value as CipherAccount[]);
   } catch {
-    toast.update(toastId, { message: "Failed to decrypt accounts", type: "error" });
+    toast.error("Failed to decrypt accounts", { id: toastId });
     loading.value = false;
     return;
   }
@@ -118,15 +115,9 @@ const downloadEncryptedBackupFile = async () => {
     link.download = `Backup (MyAuthenticator)-${new Date().toISOString()}.backup`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.update(toastId, {
-      message: "Download successful",
-      type: "success",
-    });
+    toast.success("Download successful", { id: toastId });
   } catch (error) {
-    toast.update(toastId, {
-      message: "Download failed",
-      type: "error",
-    });
+    toast.error("Download failed", { id: toastId });
     console.error("Error downloading backup file:", error);
   }
   loading.value = false;
@@ -137,16 +128,13 @@ const downloadUriListFile = async () => {
   loading.value = true;
   const raw = useNuxtData<CipherAccount[]>("accounts");
   if (!raw.data.value?.length) {
-    toast.update(toastId, {
-      message: "No accounts to backup",
-      type: "error",
-    });
+    toast.error("No accounts to backup", { id: toastId });
     loading.value = false;
     return;
   }
   const { dek, decryptAccounts } = useEncryption();
   if (!dek.value) {
-    toast.update(toastId, { message: "Vault locked", type: "error" });
+    toast.error("Vault locked", { id: toastId });
     loading.value = false;
     return;
   }
@@ -154,7 +142,7 @@ const downloadUriListFile = async () => {
   try {
     plain = await decryptAccounts(raw.data.value as CipherAccount[]);
   } catch {
-    toast.update(toastId, { message: "Failed to decrypt accounts", type: "error" });
+    toast.error("Failed to decrypt accounts", { id: toastId });
     loading.value = false;
     return;
   }
@@ -167,15 +155,9 @@ const downloadUriListFile = async () => {
     a.download = `Backup-${new Date().toISOString()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.update(toastId, {
-      message: "Download successful",
-      type: "success",
-    });
+    toast.success("Download successful", { id: toastId });
   } catch (error) {
-    toast.update(toastId, {
-      message: "Download failed",
-      type: "error",
-    });
+    toast.error("Download failed", { id: toastId });
     console.error("Error downloading URI list file:", error);
   }
   loading.value = false;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as OTPAuth from "otpauth";
-import { toast } from "@steveyuowo/vue-hot-toast";
+import { toast } from "~/utils/toast";
 import Edit from "./Edit.vue";
 import Share from "./Share.vue";
 import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
@@ -88,17 +88,11 @@ const deleteAccount = async () => {
     query: { id: targetId },
   })
     .then(async (res) => {
-      toast.update(toastId, {
-        message: res.message || "Deleted successfully",
-        type: "success",
-      });
+      toast.success(res.message || "Deleted successfully", { id: toastId });
       await deleteCachedAccount(targetId, res.version);
     })
     .catch(async (err) => {
-      toast.update(toastId, {
-        message: getWriteErrorMessage(err, "delete this authenticator"),
-        type: "error",
-      });
+      toast.error(getWriteErrorMessage(err, "delete this authenticator"), { id: toastId });
       if (accountsData.value && prevAccount && !accountsData.value.some((a) => a.id === targetId)) {
         const next = [...accountsData.value];
         if (prevIndex >= 0 && prevIndex <= next.length) {

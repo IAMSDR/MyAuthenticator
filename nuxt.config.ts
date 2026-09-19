@@ -8,6 +8,7 @@ export default defineNuxtConfig({
     "@vueuse/nuxt",
     "nuxt-auth-utils",
     "@vite-pwa/nuxt",
+    "vue-sonner/nuxt",
   ],
   css: ["~/assets/css/main.css"],
   icon: {

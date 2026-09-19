@@ -1,4 +1,4 @@
-import { toast } from "@steveyuowo/vue-hot-toast";
+import { toast } from "~/utils/toast";
 
 export function onlineNow(): boolean {
   return typeof navigator === "undefined" || navigator.onLine !== false;

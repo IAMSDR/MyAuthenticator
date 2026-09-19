@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { Toaster } from "@steveyuowo/vue-hot-toast";
-import "@steveyuowo/vue-hot-toast/vue-hot-toast.css";
-
 const { style, link, color } = useTheme();
 
 useHead({
@@ -22,6 +19,6 @@ useHead({
   <NuxtPwaManifest />
   <UApp :toaster="{ expand: false, position: 'top-right' }">
     <NuxtPage />
-    <Toaster />
+    <Toaster position="top-center" />
   </UApp>
 </template>

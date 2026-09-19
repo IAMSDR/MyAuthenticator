@@ -2,7 +2,7 @@
 import AdaptiveModal from "./AdaptiveModal.vue";
 import { QrcodeStream, QrcodeCapture } from "vue-qrcode-reader";
 import type { DetectedBarcode } from "barcode-detector/pure";
-import { toast } from "@steveyuowo/vue-hot-toast";
+import { toast } from "~/utils/toast";
 import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
 const emit = defineEmits(["close"]);
@@ -85,16 +85,10 @@ const onDetect = async (response: DetectedBarcode[]) => {
         method: "POST",
         body: cipher,
       });
-      toast.update(toastId, {
-        message: res.message || "Added successfully",
-        type: "success",
-      });
+      toast.success(res.message || "Added successfully", { id: toastId });
       await upsertCachedAccounts(cipher, res.version, now);
     } catch (err) {
-      toast.update(toastId, {
-        message: getWriteErrorMessage(err, "add scanned authenticators"),
-        type: "error",
-      });
+      toast.error(getWriteErrorMessage(err, "add scanned authenticators"), { id: toastId });
       // Rollback on failure
       const addedIds = new Set(cipher.map((c) => c.id));
       if (accountsData.value) {
