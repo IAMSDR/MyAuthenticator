@@ -112,6 +112,11 @@ export default defineNuxtConfig({
     // a local empty mock for cloudflare builds and lazy-load it in
     // server/utils/redis.ts.
     preset: process.env.NITRO_PRESET || undefined,
+    // `@simplewebauthn/server` v14 -> `@peculiar/x509` -> `tsyringe` requires
+    // the `reflect-metadata` polyfill to run before tsyringe's module body.
+    // Ensure the polyfill module is treated as having side effects so Rollup
+    // keeps it (and its import order) in the bundled server entry.
+    moduleSideEffects: ["reflect-metadata"],
     alias:
       process.env.NITRO_PRESET?.includes("cloudflare")
         ? {
