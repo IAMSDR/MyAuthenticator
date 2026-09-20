@@ -42,14 +42,14 @@ defineProps<{
   position: relative;
   transform: rotate(45deg);
   animation: checkmarkCircleAnimation 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-  animation-delay: 100ms;
+  animation-delay: 0ms;
 }
 .hot-toast-checkmark:after {
   content: "";
   box-sizing: border-box;
   animation: checkmarkAnimation 0.2s ease-out forwards;
   opacity: 0;
-  animation-delay: 200ms;
+  animation-delay: 100ms;
   position: absolute;
   border-right: 2px solid;
   border-bottom: 2px solid;
@@ -95,13 +95,13 @@ defineProps<{
   position: relative;
   transform: rotate(45deg);
   animation: errorCircleAnimation 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-  animation-delay: 100ms;
+  animation-delay: 0ms;
 }
 .hot-toast-error:after,
 .hot-toast-error:before {
   content: "";
   animation: errorFirstLineAnimation 0.15s ease-out forwards;
-  animation-delay: 150ms;
+  animation-delay: 100ms;
   position: absolute;
   border-radius: 3px;
   opacity: 0;
@@ -113,7 +113,7 @@ defineProps<{
 }
 .hot-toast-error:before {
   animation: errorSecondLineAnimation 0.15s ease-out forwards;
-  animation-delay: 180ms;
+  animation-delay: 150ms;
   transform: rotate(90deg);
 }
 @keyframes errorCircleAnimation {
