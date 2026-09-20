@@ -12,11 +12,11 @@ export default eventHandler(async (event) => {
   const req = event.node?.req as { ip?: string } | undefined;
   const ip = req?.ip || getRequestHeader(event, "cf-connecting-ip") || "unknown";
   const rateLimitKey = `auth:ratelimit:login:${ip}`;
-  const attempts = await incrWithExpire(rateLimitKey, 600, event);
+  const attempts = await incrWithExpire(rateLimitKey, 120, event);
   if (attempts > 10) {
     throw createError({
       statusCode: 429,
-      message: "Too many failed login attempts. Please try again in 10 minutes.",
+      message: "Too many failed login attempts. Please try again in 2 minutes.",
     });
   }
 
