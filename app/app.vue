@@ -17,8 +17,11 @@ useHead({
 
 <template>
   <NuxtPwaManifest />
-  <UApp :toaster="{ expand: false, position: 'top-right' }">
+  <UApp :toaster="null">
     <NuxtPage />
-    <Toaster position="top-center" />
   </UApp>
+
+  <Teleport to="body">
+    <Toaster position="top-center" />
+  </Teleport>
 </template>

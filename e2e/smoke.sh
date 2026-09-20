@@ -7,7 +7,7 @@
 #
 # Environment:
 #   BASE_URL   defaults to http://localhost:9696
-#   PASSWORD   vault password for an already-set-up instance (default: Abcdef1!)
+#   PASSWORD   vault password for an already-set-up instance (default: Admin@123$)
 #
 # This script drives a real Chrome through agent-browser against the running app.
 # It is intentionally read-mostly: it logs in, verifies TOTP generation/refresh,
@@ -17,7 +17,7 @@
 set -euo pipefail
 
 BASE_URL="${1:-http://localhost:9696}"
-PASSWORD="${PASSWORD:-Abcdef1!}"
+PASSWORD="${PASSWORD:-Admin@123$}"
 
 export AGENT_BROWSER_SESSION="$(agent-browser session id --scope worktree --prefix e2e)"
 echo "agent-browser session: $AGENT_BROWSER_SESSION"
