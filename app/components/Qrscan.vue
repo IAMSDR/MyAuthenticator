@@ -70,13 +70,11 @@ const onDetect = async (response: DetectedBarcode[]) => {
       return;
     }
 
-    // Optimistically update memory so dashboard reflects change immediately
     const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
     if (accountsData.value) {
       accountsData.value = [...cipher, ...accountsData.value];
     }
 
-    // Dismiss modal immediately for instant UI feedback
     emit("close");
 
     const toastId = toast.loading("Saving authenticators...");
@@ -89,7 +87,6 @@ const onDetect = async (response: DetectedBarcode[]) => {
       await upsertCachedAccounts(cipher, res.version, now);
     } catch (err) {
       toast.error(getWriteErrorMessage(err, "add scanned authenticators"), { id: toastId });
-      // Rollback on failure
       const addedIds = new Set(cipher.map((c) => c.id));
       if (accountsData.value) {
         accountsData.value = accountsData.value.filter((a) => !addedIds.has(a.id));

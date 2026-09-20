@@ -60,7 +60,6 @@ const addPasskey = async () => {
       displayName: passKeyName.value,
     };
 
-    // 1. Get creation options from server (includes PRF extension)
     const { creationOptions, attemptId } = await $fetch<{ creationOptions: any; attemptId: string }>("/api/webauthn/register", {
       method: "POST",
       body: {
@@ -69,14 +68,12 @@ const addPasskey = async () => {
       },
     });
 
-    // 2. Perform WebAuthn ceremony directly with @simplewebauthn/browser to receive full clientExtensionResults
     const attestationResponse = await startRegistration({
       optionsJSON: normalizePrfExtension(creationOptions),
     });
 
     createdCredId = attestationResponse.id;
 
-    // 3. Verify on server and save credential in Redis Hash
     const verificationResponse = await $fetch<{ verified: boolean }>("/api/webauthn/register", {
       method: "POST",
       body: {
@@ -95,7 +92,6 @@ const addPasskey = async () => {
     const prfBytes = getPrfResultBytes(attestationResponse.clientExtensionResults);
 
     if (prfBytes && dek.value && createdCredId) {
-      // Authenticator supports PRF: generate and store DEK wrapper
       const prfKey = await importKeyFromBytes(prfBytes);
       const b64DEK = await exportKeyToBase64(dek.value);
       const wrapped = await encryptWithKey(b64DEK, prfKey);
@@ -105,15 +101,12 @@ const addPasskey = async () => {
       });
       toast.success("Passkey registered with vault unlock support");
     } else {
-      // PRF is unsupported on this authenticator/platform
       toast.success("Passkey registered (Auth only – use password to unlock vault)");
     }
 
     passKeyName.value = "";
     if (onlineNow()) await refreshNuxtData("passkeys");
   } catch (err: any) {
-    // If registration succeeded on server but wrapping failed, cleanup credential
-    // Do not send server writes while offline.
     if (createdCredId && onlineNow()) {
       try {
         await $fetch("/api/webauthn/passkeys", {

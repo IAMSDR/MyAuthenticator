@@ -33,9 +33,7 @@ export const useEncryption = () => {
     return await encryptWithKey(plainSecret, dek.value);
   };
 
-  // Offline unlock — unwrap DEK from the IndexedDB-cached wrapped copy using the
-  // password, without any network call. Returns true on success. No raw DEK is ever
-  // persisted; the wrapped value was cached during a prior online login/setup.
+  // Offline password unlock: unwrap cached wrappedDEK from IndexedDB (no network; raw DEK never persisted).
   const unlockWithPassword = async (password: string): Promise<boolean> => {
     const wrapped = await getWrappedDEK("password");
     if (!wrapped) return false;
@@ -49,9 +47,7 @@ export const useEncryption = () => {
     }
   };
 
-  // Offline unlock via a passkey PRF secret against the cached wrapped copy for a
-  // specific credentialId (`wrappedDEK:prf:{credentialId}`). Falls back to the
-  // generic `wrappedDEK:prf` key when no credentialId is known.
+  // Offline PRF unlock: unwrap cached wrappedDEK:prf:{credentialId} (fallback to generic wrappedDEK:prf).
   const unlockWithPrf = async (prfSecret: Uint8Array, credentialId?: string): Promise<boolean> => {
     const wrapped =
       (credentialId ? await getWrappedDEK(`prf:${credentialId}`) : undefined) ??
@@ -68,18 +64,14 @@ export const useEncryption = () => {
     }
   };
 
-  // Clear DEK from memory on page unload. Previously this used onMounted/
-  // onUnmounted which warns when the composable is called outside a component
-  // setup (e.g. from middleware `auth.global.ts`). `beforeunload` is a global
-  // window event — register it once directly without lifecycle hooks.
+  // Clear DEK on page unload via global beforeunload (avoids onMounted warning outside setup).
   if (import.meta.client) {
-    // Use a module-level flag so multiple calls to useEncryption() don't
-    // stack duplicate listeners (the composable is used in ~10 places).
+    // Deduplicate listener: module flag ensures single registration across ~10 call sites.
     const g = globalThis as unknown as { __dekBeforeUnloadRegistered?: boolean };
     if (!g.__dekBeforeUnloadRegistered) {
       g.__dekBeforeUnloadRegistered = true;
       window.addEventListener("beforeunload", () => {
-        // Clear via useState directly so the handler doesn't close over a stale ref
+        // Use useState directly to avoid stale ref closure.
         useState<CryptoKey | null>("dek", () => null).value = null;
       });
     }

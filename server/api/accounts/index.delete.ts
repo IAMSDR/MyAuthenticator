@@ -5,7 +5,6 @@ export default eventHandler(async (event) => {
   if (!id) throw createError({ statusCode: 400, message: "Missing id" });
 
   const redis = await getRedis(event);
-  // Pre-check existence so failed/non-existent deletions don't corrupt version, count, or cache metadata
   const exists = redis.hexists
     ? (await redis.hexists(redisKeys.accounts, id)) === 1
     : (await redis.hget(redisKeys.accounts, id)) !== null;

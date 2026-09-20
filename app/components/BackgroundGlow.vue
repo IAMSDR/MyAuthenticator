@@ -18,7 +18,6 @@ if (import.meta.client) {
 
 <template>
   <div class="fixed inset-0 pointer-events-none overflow-hidden select-none -z-10 bg-white dark:bg-neutral-950">
-    <!-- Cursor glow adapting to dark / light theme -->
     <div
       class="absolute inset-0 transition-[background] duration-200 ease-out"
       :style="{
@@ -26,10 +25,8 @@ if (import.meta.client) {
       }"
     />
 
-    <!-- Ambient top glow — accent tinted -->
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,color-mix(in_oklab,var(--ui-primary)_4%,transparent),transparent_60%)]" />
 
-    <!-- Dot matrix texture -->
     <div
       class="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
       style="background-image: radial-gradient(circle, currentColor 1px, transparent 1px); background-size: 24px 24px;"

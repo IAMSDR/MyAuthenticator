@@ -1,6 +1,5 @@
 import { onlineNow } from "~/utils/offline";
 
-// Shared reactive offline state for the app shell / banners.
 export const useOffline = () => {
   const isOffline = useState<boolean>("offline", () => false);
 
@@ -8,7 +7,6 @@ export const useOffline = () => {
     isOffline.value = offline;
   };
 
-  // Keep the state in sync with live connectivity changes and auto-refresh on reconnection.
   if (import.meta.client) {
     const g = globalThis as unknown as { __offlineListenersRegistered?: boolean };
     if (!g.__offlineListenersRegistered) {
@@ -16,7 +14,6 @@ export const useOffline = () => {
 
       const handleOnline = async () => {
         useState<boolean>("offline", () => false).value = false;
-        // 1. Check for Service Worker updates to fetch latest UI/assets
         if ("serviceWorker" in navigator) {
           try {
             const reg = await navigator.serviceWorker.getRegistration();
@@ -27,7 +24,6 @@ export const useOffline = () => {
             console.debug("Service worker update check skipped:", err);
           }
         }
-        // 2. Fetch fresh account data from server
         try {
           await refreshNuxtData("accounts");
         } catch (err) {

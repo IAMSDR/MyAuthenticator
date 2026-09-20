@@ -6,7 +6,6 @@ export default eventHandler(async (event) => {
   if (error) throw createError({ statusCode: 400, statusMessage: "Validation Failed", message: error.message });
 
   const redis = await getRedis(event);
-  // Strictly require and verify current password before allowing password or DEK change
   const existingHash = await redis.get(redisKeys.passwordHash);
   if (!existingHash) throw createError({ statusCode: 500, message: "Password hash missing" });
   const ok = await bcryptVerify(existingHash, data.oldPassword);

@@ -24,14 +24,12 @@ async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
   const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
   const prevAccount = accountsData.value?.find((acc) => acc.id === props.accountId);
 
-  // Optimistically update memory so the tile reflects edits instantly
   if (accountsData.value) {
     accountsData.value = accountsData.value.map((acc) =>
       acc.id === props.accountId ? { ...acc, ...event.data } : acc
     );
   }
 
-  // Dismiss modal immediately
   emit("close");
 
   const toastid = toast.loading("Saving...");
@@ -46,7 +44,6 @@ async function updateAccount(event: FormSubmitEvent<AccountEdit>) {
     })
     .catch(async (err) => {
       toast.error(getWriteErrorMessage(err, "save changes"), { id: toastid });
-      // Rollback only affected account on failure
       if (accountsData.value && prevAccount) {
         accountsData.value = accountsData.value.map((acc) =>
           acc.id === props.accountId ? prevAccount : acc

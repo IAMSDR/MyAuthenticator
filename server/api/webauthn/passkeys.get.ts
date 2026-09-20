@@ -10,7 +10,7 @@ export default eventHandler(async (event) => {
       if (p?.id) {
         passkeys.push({ id: p.id, displayName: p.displayName, createdAt: p.createdAt });
       }
-    } catch {}
+    } catch { void 0; }
   }
   return passkeys;
 });

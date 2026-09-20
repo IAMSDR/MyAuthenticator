@@ -38,7 +38,6 @@ const handleOpenChange = (val: boolean) => {
 </script>
 
 <template>
-  <!-- Desktop: Centered Floating Modal -->
   <UModal
     v-if="isDesktop"
     :open="openModel"
@@ -75,7 +74,6 @@ const handleOpenChange = (val: boolean) => {
     </template>
   </UModal>
 
-  <!-- Mobile: Smooth Bottom Sheet Drawer -->
   <UDrawer
     v-else
     direction="bottom"

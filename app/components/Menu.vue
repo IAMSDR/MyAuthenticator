@@ -18,20 +18,16 @@ const changePasswordModal = overlay.create(ChangePassword);
 const logout = async () => {
   emit("close");
   clearDEK();
-  // Do not delete Workbox precache caches — would break offline refresh.
-  // Only clear volatile runtime caches if needed (e.g. iconify-api), keep 'workbox-precache-*'.
+  // Keep workbox precache intact; only clear volatile runtime caches (e.g. iconify-api).
   if (import.meta.client && "caches" in window) {
     try {
       const cacheNames = await window.caches.keys();
       const deletable = cacheNames.filter((n) => !n.startsWith("workbox-precache"));
-      // Further restrict to our runtime caches; keep precache intact.
       const runtimeOnly = deletable.filter((n) => n === "iconify-api");
       await Promise.all(runtimeOnly.map((name) => window.caches.delete(name)));
     } catch {
-      // ignore cache clearing error
     }
   }
-  // Offline: no server call — local lock/logout still completes.
   if (typeof navigator === "undefined" || navigator.onLine !== false) {
     await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
   }

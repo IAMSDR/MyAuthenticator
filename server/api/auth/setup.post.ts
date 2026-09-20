@@ -5,19 +5,18 @@ export default eventHandler(async (event) => {
   if (error) throw createError({ statusCode: 400, statusMessage: "Validation Failed", message: error.message });
 
   const redis = await getRedis(event);
-  // Atomically claim setup with NX lock (ex: 60s) to prevent concurrent setup races
+  // Claim setup with NX lock (60s) to prevent concurrent races
   const claimed = await redis.set(redisKeys.setupComplete, "claimed", { nx: true, ex: 60 });
   if (!claimed) throw createError({ statusCode: 409, message: "Already setup or setup in progress" });
 
   try {
     const hash = await bcryptHash(data.password);
 
-    // Generate prfSalt 32B base64url
     const prfSaltBytes = new Uint8Array(32);
     crypto.getRandomValues(prfSaltBytes);
     const prfSalt = Buffer.from(prfSaltBytes).toString("base64url");
 
-    // Batch all setup writes into one atomic transaction (fewer billed commands).
+    // Batch setup writes atomically (fewer billed commands).
     await runTransaction([
       ["SET", redisKeys.passwordHash, hash],
       ["SET", redisKeys.prfSalt, prfSalt],
@@ -27,7 +26,6 @@ export default eventHandler(async (event) => {
       ["DEL", redisKeys.accounts],
     ], event);
   } catch (err) {
-    // If setup fails, clear the temporary claim
     const current = await redis.get(redisKeys.setupComplete);
     if (current === "claimed") {
       await redis.del(redisKeys.setupComplete);

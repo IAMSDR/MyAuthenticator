@@ -30,20 +30,20 @@ const { data: cipherData, status } = await useAsyncData<CipherAccount[]>("accoun
   }
   try {
     const meta = await $fetch<{ version: number; updatedAt: string; count: number; order?: string[] }>("/api/accounts/meta");
-    // Server-first: always fetch fresh accounts while online and replace local cache.
+    // Server-first: fetch fresh accounts and replace cache while online.
     const fresh = await $fetch<CipherAccount[]>("/api/accounts");
     const order = Array.isArray(meta.order) && meta.order.length ? meta.order : undefined;
     await cacheAccountsFromServer(fresh, { version: meta.version, updatedAt: meta.updatedAt }, order);
     setOfflineState(false);
     return sortByOrder(fresh, order);
   } catch (e: any) {
-    // Only fall back to cache on true offline/transport failures, not HTTP 401/500.
+    // Only fallback to cache on transport/offline failures, not HTTP 401/500.
     if (isNetworkError(e) || !onlineNow()) {
       setOfflineState(true);
       if (cached && Object.keys(cached.map).length) return sortByOrder(Object.values(cached.map) as CipherAccount[], cached.order);
       return [] as CipherAccount[];
     }
-    // Surface HTTP errors (e.g. 401 session expiry) without masking with stale cache.
+    // Surface HTTP errors (e.g. 401) without masking with stale cache.
     throw e;
   }
 }, { server: false, default: () => [] as CipherAccount[] });
@@ -85,22 +85,18 @@ const accounts = computed(() => {
 
 <template>
   <div class="relative min-h-screen flex flex-col">
-    <!-- Clean Dot Grid Texture without Cursor Glow -->
     <BackgroundPattern />
 
-    <!-- Sleek Desktop Header & Top Navbar -->
     <AppNavbar />
 
     <main class="flex-1 w-full pb-24 md:pb-12">
       <UContainer class="py-6">
-        <!-- Mobile minimal search — expands below header -->
         <Transition name="slidey">
           <div v-if="showSearchBar" class="md:hidden -mx-4 sm:-mx-6 lg:-mx-8 -mt-2 mb-2">
             <Search v-model:modal-value="searchQuery" />
           </div>
         </Transition>
 
-        <!-- Empty State -->
         <div
           v-if="!cipherData?.length && status === 'success' && !decryptError"
           class="min-h-[50vh] flex flex-col items-center justify-center space-y-3 text-center"
@@ -114,7 +110,6 @@ const accounts = computed(() => {
           </p>
         </div>
 
-        <!-- Locked Vault State -->
         <div
           v-else-if="decryptError"
           class="min-h-[50vh] flex flex-col items-center justify-center space-y-3 p-4 text-center"
@@ -127,7 +122,6 @@ const accounts = computed(() => {
           <UButton to="/login" variant="soft" size="sm">Go to login</UButton>
         </div>
 
-        <!-- Responsive Spacious Accounts Grid -->
         <div
           v-else
           class="grid grid-cols-1 min-[520px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-4.5"
@@ -137,7 +131,6 @@ const accounts = computed(() => {
       </UContainer>
     </main>
 
-    <!-- Mobile Floating Bottom Navigation -->
     <BottomBar />
   </div>
 </template>

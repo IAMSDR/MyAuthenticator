@@ -14,13 +14,10 @@ export function isNetworkError(err: any): boolean {
   // The browser explicitly knows it is offline.
   if (!onlineNow()) return true;
 
-  // $fetch/ofetch wraps HTTP responses in a FetchError with status/statusCode.
-  // Anything carrying a server response is NOT a transport failure.
+  // FetchError with status/response = HTTP error, not transport failure.
   if (err?.response || err?.statusCode || err?.status) return false;
 
-  // Only classify known transport-layer failures as network errors. Other
-  // exceptions (WebAuthn DOMExceptions, TypeErrors from bad options, crypto
-  // errors, etc.) must surface their real message instead of "You're offline".
+  // Only transport failures = offline; WebAuthn/crypto/TypeErrors must surface real message.
   const name = err?.name ?? "";
   if (name === "AbortError") return false;
   if (name === "TypeError" && /fetch|network|load failed/i.test(String(err?.message ?? ""))) {

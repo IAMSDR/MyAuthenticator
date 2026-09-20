@@ -5,7 +5,6 @@ export default eventHandler(async (event) => {
   const redis = await getRedis(event);
   const id = String(query.id);
   await redis.hdel(redisKeys.passkeys, id);
-  // also delete PRF wrapper if exists
   await redis.del(dekPrfKey(id));
   return { status: 200, message: "Deleted successfully" };
 });

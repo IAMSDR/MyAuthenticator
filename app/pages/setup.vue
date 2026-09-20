@@ -68,9 +68,7 @@ const onConfirm = async () => {
     try {
       await set("wrappedDEK:password", wrappedDEK);
       await set("accounts:cache", { version: 0, updatedAt: new Date().toISOString(), map: {} });
-    } catch {
-      // Local cache write failed, but server account creation succeeded
-    }
+    } catch { void 0; }
     toast.success("Account created", { id });
     showConfirmModal.value = false;
     await navigateTo("/");
@@ -84,7 +82,6 @@ const onConfirm = async () => {
 
 <template>
   <div class="relative min-h-screen flex items-center justify-center p-4">
-    <!-- Interactive Cursor Glow active on Setup -->
     <BackgroundGlow />
 
     <div class="w-full max-w-sm">
@@ -160,7 +157,6 @@ const onConfirm = async () => {
       </UCard>
     </div>
 
-    <!-- Confirmation Adaptive Modal (Desktop Modal / Mobile Drawer) -->
     <AdaptiveModal
       v-model:open="showConfirmModal"
       title="Confirm account creation"

@@ -2,7 +2,6 @@ export default eventHandler(async (event) => {
   await requireUserSession(event);
   const body = await readBody(event);
 
-  // Support single cipherAccount or array
   let cipherAccounts: CipherAccount[];
   if (Array.isArray(body)) {
     const parsed = cipherAccountsSchema.safeParse(body);
@@ -16,7 +15,6 @@ export default eventHandler(async (event) => {
 
   if (cipherAccounts.length === 0) throw createError({ statusCode: 400, message: "No accounts provided" });
 
-  // Deduplicate cipherAccounts by id (last one wins if duplicated in same batch)
   const uniqueMap = new Map<string, CipherAccount>();
   for (const acc of cipherAccounts) {
     uniqueMap.set(acc.id, acc);
@@ -24,7 +22,6 @@ export default eventHandler(async (event) => {
   const uniqueAccounts = Array.from(uniqueMap.values());
 
   const redis = await getRedis(event);
-  // Check which account IDs already exist to only increment `count` for net-new records
   let newRecordsCount = 0;
   for (const acc of uniqueAccounts) {
     const exists = redis.hexists

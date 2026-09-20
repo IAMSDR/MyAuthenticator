@@ -20,39 +20,27 @@ const toggleSearch = () => {
 </script>
 
 <template>
-  <!-- Mobile-only floating bar -->
   <div
     class="md:hidden fixed inset-x-0 z-30 px-4"
     :style="{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }"
   >
-    <!--
-      Structure: two layers.
-      1. Glass layer (absolute, overflow-hidden) — holds blur + gradient + rim light, clips bg effects to the pill shape.
-      2. Content layer (relative, NOT clipped) — buttons + raised FAB, so the FAB can bulge above the top edge freely.
-    -->
     <div class="relative h-[64px]">
-      <!-- True frosted glass layer -->
       <div
         class="absolute inset-0 overflow-hidden rounded-[22px] border border-white/70 dark:border-white/[0.14] shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)]"
         aria-hidden="true"
       >
-        <!-- Strong blur + transparent tint — content shows & blurs through -->
         <div
           class="absolute inset-0 backdrop-blur-2xl backdrop-saturate-150 bg-white/60 dark:bg-neutral-950/60"
         />
-        <!-- Top rim light — accent tinted, subtle -->
         <div
           class="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-(--ui-primary)/50 to-transparent dark:via-(--ui-primary)/40"
         />
-        <!-- Bottom inner shadow for depth -->
         <div
           class="absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-black/[0.05] to-transparent dark:from-black/30"
         />
       </div>
 
-      <!-- Content layer — not clipped, FAB can raise above -->
       <div class="relative flex items-center justify-between h-full px-3">
-        <!-- Menu -->
         <button
           type="button"
           aria-label="Open menu"
@@ -62,7 +50,6 @@ const toggleSearch = () => {
           <UIcon name="i-lucide-menu" class="size-[22px]" />
         </button>
 
-        <!-- Add — raised gradient FAB, soft colored shadow -->
         <button
           type="button"
           aria-label="Add account"
@@ -75,7 +62,6 @@ const toggleSearch = () => {
           />
         </button>
 
-        <!-- Search -->
         <button
           type="button"
           :aria-label="showSearchBar ? 'Close search' : 'Search'"

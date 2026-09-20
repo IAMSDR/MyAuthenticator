@@ -19,12 +19,7 @@ export default defineWebAuthnRegisterEventHandler({
     const redis = await getRedis(event);
     const prfSalt = await redis.get(redisKeys.prfSalt);
     if (prfSalt) {
-      // NOTE: `first` MUST be a base64url string here, not an ArrayBuffer.
-      // These options are serialized to JSON over HTTP; an ArrayBuffer would
-      // become `{}` and browsers reject it with a TypeError
-      // ("The provided value is not of type '(ArrayBuffer or ArrayBufferView)'").
-      // The client decodes this back into bytes before calling WebAuthn.
-      // See: https://w3c.github.io/webauthn/#dom-authenticationextensionsprfvaluesjson-first
+      // PRF `first` must be base64url (not ArrayBuffer) — JSON serializes AB as {}
       return {
         extensions: {
           prf: {
@@ -40,7 +35,6 @@ export default defineWebAuthnRegisterEventHandler({
   validateUser: (user) => passkeyUser.parseAsync(user),
   async onSuccess(event, { user, credential }) {
     const redis = await getRedis(event);
-    // Check if device already registered by id in Hash
     const exists = redis.hexists
       ? (await redis.hexists(redisKeys.passkeys, credential.id)) === 1
       : (await redis.hget(redisKeys.passkeys, credential.id)) !== null;
@@ -62,7 +56,6 @@ export default defineWebAuthnRegisterEventHandler({
       createdAt: new Date().toISOString(),
     };
 
-    // Store in Redis Hash atomically by credential ID
     await redis.hset(redisKeys.passkeys, credential.id, JSON.stringify(passkeyData));
   },
 });

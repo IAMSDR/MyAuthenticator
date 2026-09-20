@@ -8,9 +8,7 @@ export default eventHandler(async (event) => {
     try {
       const parsed = JSON.parse(json) as CipherAccount;
       if (parsed?.id && parsed?.secret) accounts.push(parsed);
-    } catch {
-      // skip invalid JSON (corrupted entry)
-    }
+    } catch { void 0; }
   }
   return accounts;
 });

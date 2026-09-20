@@ -47,7 +47,6 @@ const clearSearch = () => {
   searchInputRef.value?.focus();
 };
 
-// Global shortcut: Ctrl+K or Cmd+K focuses search
 onKeyStroke(["k", "K"], (e) => {
   if (e.ctrlKey || e.metaKey) {
     e.preventDefault();
@@ -58,7 +57,6 @@ onKeyStroke(["k", "K"], (e) => {
   }
 });
 
-// Escape closes search input focus when empty or clears search query
 onKeyStroke("Escape", () => {
   if (searchQuery.value) {
     searchQuery.value = "";
@@ -71,10 +69,8 @@ onKeyStroke("Escape", () => {
 <template>
   <header class="hidden md:block sticky top-0 z-30 w-full bg-white/75 dark:bg-neutral-950/65 backdrop-blur-xl backdrop-saturate-150 border-b border-neutral-200/60 dark:border-white/[0.08] transition-colors duration-200 shadow-[0_1px_2px_0_rgba(0,0,0,0.03)]">
     <div class="mx-auto flex h-[58px] max-w-7xl items-center justify-between gap-4 px-6 lg:px-8">
-      <!-- Left spacer: Balances the right actions so center search is truly centered -->
       <div class="flex-1 min-w-0" />
 
-      <!-- Center: Refined search bar -->
       <div class="w-full max-w-[480px] shrink-0">
         <div class="relative w-full group">
           <UIcon
@@ -89,7 +85,6 @@ onKeyStroke("Escape", () => {
             class="w-full h-9 pl-9.5 pr-12 rounded-full bg-neutral-100/70 dark:bg-white/[0.05] border border-neutral-200/60 dark:border-white/[0.07] hover:bg-neutral-100/90 dark:hover:bg-white/[0.08] hover:border-neutral-300/70 dark:hover:border-white/10 focus:bg-white dark:focus:bg-neutral-900 focus:border-(--ui-primary)/40 focus:ring-2 focus:ring-(--ui-primary)/20 text-[13px] leading-none text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none transition-all duration-150"
           >
 
-          <!-- Clear button when typing -->
           <button
             v-if="searchQuery"
             type="button"
@@ -100,7 +95,6 @@ onKeyStroke("Escape", () => {
             <UIcon :name="closeIcon" class="size-3.5" />
           </button>
 
-          <!-- Keyboard shortcut badge when empty -->
           <div
             v-else
             class="absolute right-2.5 top-1/2 -translate-y-1/2 hidden sm:flex items-center pointer-events-none"
@@ -112,9 +106,7 @@ onKeyStroke("Escape", () => {
         </div>
       </div>
 
-      <!-- Right: Action Buttons -->
       <div class="flex-1 flex items-center justify-end gap-2 shrink-0">
-        <!-- Add Button: Nuxt UI Soft Primary Button -->
         <UTooltip text="Add account">
           <UButton
             :icon="plusIcon"
@@ -127,10 +119,8 @@ onKeyStroke("Escape", () => {
           />
         </UTooltip>
 
-        <!-- Subtle Divider -->
         <span class="w-px h-4 bg-neutral-200 dark:bg-white/10 mx-0.5 hidden sm:block" aria-hidden="true" />
 
-        <!-- Theme Toggle Button (Dark / Light) -->
         <UTooltip :text="isDark ? 'Switch to light mode' : 'Switch to dark mode'">
           <UButton
             :icon="themeIcon"
@@ -143,7 +133,6 @@ onKeyStroke("Escape", () => {
           />
         </UTooltip>
 
-        <!-- Settings Button -->
         <UTooltip text="Settings & Menu">
           <UButton
             icon="i-lucide-settings-2"

@@ -1,9 +1,6 @@
 import { Redis as UpstashRedis } from "@upstash/redis";
 import type { H3Event } from "h3";
-// NOTE: `ioredis` is Node-TCP only and pulls `node:string_decoder` / `node:net`
-// which have no Cloudflare Workers polyfill (unenv throws
-// "string_decoder.StringDecoder is not implemented yet").
-// Keep it out of the Cloudflare bundle via lazy dynamic import.
+// ioredis is Node-TCP only (needs node:string_decoder/net); lazy-import to avoid Cloudflare bundle.
 let _IORedisCtor: typeof import("ioredis").default | null = null;
 async function getIORedisCtor(): Promise<typeof import("ioredis").default> {
   if (_IORedisCtor) return _IORedisCtor;
@@ -77,12 +74,10 @@ function createUpstashClient(url: string, token: string): RedisClient {
       return Number(res) || 1;
     },
     scan: async (cursor, opts) => {
-      // Upstash scan via SCAN command
       const args: unknown[] = [cursor];
       if (opts?.match) args.push("MATCH", opts.match);
       if (opts?.count) args.push("COUNT", opts.count);
       const res = await (client as unknown as { scan: (...a: unknown[]) => Promise<unknown> }).scan(cursor, opts);
-      // Upstash returns [cursor, keys]
       return res as [string, string[]];
     },
     keys: async (pattern) => {
@@ -111,9 +106,7 @@ function createUpstashClient(url: string, token: string): RedisClient {
 
 async function createIORedisClient(redisUrl: string): Promise<RedisClient> {
   const IORedis = await getIORedisCtor();
-  // ioredis v6 switched the default wire protocol to RESP3, which changes some
-  // reply shapes (e.g. hgetall/multi/scan). This client is written against the
-  // RESP2 shapes, so pin protocol 2 to keep behaviour identical to ioredis v5.
+  // Pin ioredis protocol 2: v6 default RESP3 changes hgetall/multi/scan shapes.
   const client = new IORedis(redisUrl, { maxRetriesPerRequest: 3, lazyConnect: false, protocol: 2 });
   _isUpstash = false;
   return {
@@ -195,8 +188,7 @@ export async function incrWithExpire(key: string, seconds: number, event?: H3Eve
   return Number(results[0]) || 1;
 }
 
-// Extract the HINCRBY value for `key field` from a transaction, by locating the
-// matching command in the original `commands` list and reading its result index.
+// Extract HINCRBY `key field` value from transaction results by command index.
 export function versionFromTransaction(results: unknown[], commands: [string, ...unknown[]][], key: string, field: string): number {
   for (let i = 0; i < commands.length; i++) {
     const c = commands[i];
@@ -226,8 +218,7 @@ interface CloudflareEventContext {
 }
 
 function getCloudflareEnv(event?: H3Event): CloudflareEnv | undefined {
-  // Only read from globalThis.__env__ (set externally by Nitro or a startup hook).
-  // Never write request-scoped env to globalThis to avoid cross-request env leakage.
+  // Only read globalThis.__env__; never write request env there (cross-request leakage).
   const globalObj = globalThis as unknown as { __env__?: CloudflareEnv };
   if (!event) return globalObj.__env__;
 
@@ -235,10 +226,7 @@ function getCloudflareEnv(event?: H3Event): CloudflareEnv | undefined {
   return ctx?.cloudflare?.env || ctx?._platform?.cloudflare?.env || globalObj.__env__;
 }
 
-// Detect if we are actually running on Cloudflare Workers/Pages by checking
-// the event context (set by the Cloudflare preset) or the CF_PAGES env var.
-// We intentionally do NOT use the truthiness of `getCloudflareEnv()` because
-// its `globalThis.__env__` fallback can be set on Node.js runtimes too.
+// Detect Cloudflare Workers/Pages via event context or CF_PAGES (not getCloudflareEnv truthiness).
 function isCloudflareRuntime(event?: H3Event): boolean {
   if (event) {
     const ctx = event.context as unknown as CloudflareEventContext | undefined;
@@ -247,12 +235,7 @@ function isCloudflareRuntime(event?: H3Event): boolean {
   return Boolean(typeof process !== "undefined" && (process as unknown as { env?: Record<string, string> }).env?.CF_PAGES);
 }
 
-// Singleton Redis client. The first call to getRedis() determines which env
-// vars and credentials are used for the lifetime of this isolate/process.
-// The `event` parameter is used only to resolve Cloudflare Workers bindings
-// on that initial call; subsequent calls return the cached client regardless
-// of the event passed in. This is intentional: credentials are expected to
-// be stable across requests within the same isolate.
+// Singleton Redis: first getRedis() wins for isolate lifetime; event only for initial CF bindings.
 export async function getRedis(event?: H3Event): Promise<RedisClient> {
   if (_redis) return _redis;
   if (_redisPromise) return _redisPromise;
@@ -331,7 +314,6 @@ export async function getRedis(event?: H3Event): Promise<RedisClient> {
   throw createError({ statusCode: 500, message: "Redis not configured. Set UPSTASH_REDIS_REST_URL+TOKEN or REDIS_URL" });
 }
 
-// Helpers
 export const redisKeys = {
   setupComplete: "auth:setupComplete",
   passwordHash: "auth:passwordHash",
@@ -364,9 +346,7 @@ export async function getAccountsMeta(event?: H3Event) {
       const all = await redis.hgetall(redisKeys.accounts);
       actualCount = all ? Object.keys(all).length : 0;
     }
-  } catch {
-    // ignore
-  }
+  } catch { void 0; }
 
   if (!meta || Object.keys(meta).length === 0) {
     return {

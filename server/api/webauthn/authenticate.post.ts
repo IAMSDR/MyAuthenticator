@@ -19,12 +19,7 @@ export default defineWebAuthnAuthenticateEventHandler({
     const redis = await getRedis(event);
     const prfSalt = await redis.get(redisKeys.prfSalt);
     if (prfSalt) {
-      // NOTE: `first` MUST be a base64url string here, not an ArrayBuffer.
-      // These options are serialized to JSON over HTTP; an ArrayBuffer would
-      // become `{}` and browsers reject it with a TypeError
-      // ("The provided value is not of type '(ArrayBuffer or ArrayBufferView)'").
-      // The client decodes this back into bytes before calling WebAuthn.
-      // See: https://w3c.github.io/webauthn/#dom-authenticationextensionsprfvaluesjson-first
+      // PRF `first` must be base64url (not ArrayBuffer) — JSON serializes AB as {}
       return {
         extensions: {
           prf: {
@@ -61,7 +56,5 @@ export default defineWebAuthnAuthenticateEventHandler({
       }
     }
     await setUserSession(event, { user: "ADMIN" });
-    // Note: wrappedDEK fetch is done via GET /api/webauthn/wrap?credentialId=...
-    // If no wrapper exists, client will show "Passkey has no decrypt wrapper, use password login"
   },
 });

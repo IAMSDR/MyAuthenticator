@@ -52,7 +52,6 @@ export const getIcons = async (query: string) => {
   const clean = query?.trim();
   if (!clean) return [];
 
-  // Offline: no server call — immediately serve IDB/default fallback.
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     const cached = await getCachedIconSearch(clean);
     if (cached?.length) return cached;
@@ -71,18 +70,15 @@ export const getIcons = async (query: string) => {
     );
 
     if (!res.icons || !res.icons.length) {
-      // Remember the fallback too so offline searches stay consistent.
       const fallback = [{ label: clean, icon: defaultIcon }];
       await setCachedIconSearch(clean, fallback);
       return fallback;
     }
 
     const mapped = res.icons.map(toIconEntry);
-    // Cache for offline use (previously searched/used icons resolve from IDB).
     await setCachedIconSearch(clean, mapped);
     return mapped;
   } catch {
-    // Fetch failure: serve previously cached results for this query when available.
     const cached = await getCachedIconSearch(clean);
     if (cached?.length) return cached;
     return [
@@ -98,7 +94,6 @@ export const matchIcon = async (query: string) => {
   const icon = query?.toLowerCase().trim();
   if (!icon) return defaultIcon;
 
-  // Offline: no server call — resolve from IDB directly.
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     const cached = await findCachedIconMatch(icon);
     if (cached) return cached;
@@ -127,7 +122,6 @@ export const matchIcon = async (query: string) => {
       }
     }
   } catch {
-    // Fetch failure: resolve from previously cached icons.
     const cached = await findCachedIconMatch(icon);
     if (cached) return cached;
     return defaultIcon;
@@ -149,7 +143,6 @@ export const extractAccountsFromUriList = async (
     const lineNum = i + 1;
     const trimmed = rawLine ? rawLine.trim() : "";
 
-    // Skip blank lines and comments
     if (!trimmed || trimmed.startsWith("#")) {
       continue;
     }
@@ -172,11 +165,8 @@ export const extractAccountsFromUriList = async (
       continue;
     }
 
-    // Lenient preprocessing for common authenticators' formatting variations
     const cleanUri = trimmed
-      // Normalize sha-1, SHA-256, etc.
       .replace(/([?&]algorithm=)sha-?(\d+)/gi, "$1SHA$2")
-      // Remove spaces, dashes, or pluses from secret parameter (handling URL encoding like %20)
       .replace(/([?&]secret=)([^&]+)/i, (_, prefix, val) => {
         try {
           return prefix + decodeURIComponent(val).replace(/[\s\-_+]/g, "");

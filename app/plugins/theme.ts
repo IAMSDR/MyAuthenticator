@@ -35,9 +35,7 @@ export default defineNuxtPlugin({
             const state = useState<T>(key);
             state.value = JSON.parse(raw);
           }
-        } catch {
-          // ignore malformed localStorage
-        }
+        } catch { void 0; }
       }
 
       restoreState("nuxt-ui-ai-theme");
@@ -62,9 +60,7 @@ export default defineNuxtPlugin({
             }
           });
         }
-      } catch {
-        // ignore malformed localStorage
-      }
+      } catch { void 0; }
     }
 
     if (import.meta.server) {
@@ -184,7 +180,7 @@ export default defineNuxtPlugin({
                     var el = document.getElementById('chat-custom-colors');
                     if (el) { el.textContent = ':root { ' + vars.join(' ') + ' }'; }
                   }
-                } catch(e) {}
+                } catch { void 0; }
               }
             })();
             `.replace(/\s+/g, " "),
@@ -216,7 +212,7 @@ export default defineNuxtPlugin({
                     var el = document.getElementById('chat-css-variables');
                     if (el) { el.textContent = parts.join(' '); }
                   }
-                } catch(e) {}
+                } catch { void 0; }
               }
             })();
             `.replace(/\s+/g, " "),

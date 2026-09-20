@@ -50,10 +50,7 @@ export async function cacheAccountsFromServer(accounts: CipherAccount[], meta: {
   await setCache({ version: meta.version, updatedAt: meta.updatedAt, map, order });
 }
 
-/**
- * Optimistically upserts one or more accounts into IndexedDB cache.
- * Updates cache version and updatedAt if provided by the server response.
- */
+// Upsert accounts into IndexedDB cache (updates version/updatedAt).
 export async function upsertCachedAccounts(
   accounts: CipherAccount[],
   version?: number,
@@ -79,9 +76,7 @@ export async function upsertCachedAccounts(
   await setCache(cached);
 }
 
-/**
- * Optimistically updates specific fields of a cached account in IndexedDB.
- */
+// Update cached account fields in IndexedDB.
 export async function updateCachedAccountFields(
   id: string,
   fields: Partial<CipherAccount>,
@@ -98,9 +93,7 @@ export async function updateCachedAccountFields(
   await setCache(cached);
 }
 
-/**
- * Optimistically deletes an account from the IndexedDB cache.
- */
+// Delete account from IndexedDB cache.
 export async function deleteCachedAccount(
   id: string,
   version?: number,

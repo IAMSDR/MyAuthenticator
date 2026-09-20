@@ -26,7 +26,6 @@ const loginWithPasskey = async () => {
   loading.value = true;
   const id = toast.loading("Authenticating...");
   try {
-    // 1. Get request options from server (includes PRF eval extension)
     const { requestOptions, attemptId } = await $fetch<{ requestOptions: any; attemptId: string }>("/api/webauthn/authenticate", {
       method: "POST",
       body: {
@@ -34,7 +33,6 @@ const loginWithPasskey = async () => {
       },
     });
 
-    // 2. Perform WebAuthn authentication via @simplewebauthn/browser
     const assertionResponse = await startAuthentication({
       optionsJSON: normalizePrfExtension(requestOptions),
     });
@@ -42,7 +40,6 @@ const loginWithPasskey = async () => {
     const credentialId = assertionResponse.id;
     const prfBytes = getPrfResultBytes(assertionResponse.clientExtensionResults);
 
-    // 3. Verify assertion on server
     const verificationResponse = await $fetch<{ verified: boolean }>("/api/webauthn/authenticate", {
       method: "POST",
       body: {
@@ -56,13 +53,11 @@ const loginWithPasskey = async () => {
       throw new Error("Authentication verification failed");
     }
 
-    // 4. Fetch DEK wrapper for this passkey
     let wrappedData: { wrappedDEK: string };
     try {
       wrappedData = await $fetch(`/api/webauthn/wrap?credentialId=${encodeURIComponent(credentialId)}`);
     } catch {
-      // Passkey exists for authentication, but has no DEK wrapper (registered without PRF)
-      // Logout session so user is not stuck in half-authenticated state without DEK
+      // No DEK wrapper (PRF-less passkey) → logout to avoid half-authenticated state
       if (onlineNow()) await $fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
       toast.error("Passkey authenticated, but cannot unlock vault. Enter password to unlock.", { id });
       return;
@@ -94,7 +89,7 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
   loading.value = true;
   const toastid = toast.loading("Verifying...");
   try {
-    // Instant offline unlock without waiting for network timeout
+    // Offline unlock: no network wait
     if (!onlineNow()) {
       const ok = await unlockWithPassword(event.data.password);
       if (ok) {
@@ -133,9 +128,7 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
     setDEK(dek);
     try {
       await set("wrappedDEK:password", res.wrappedDEK);
-    } catch {
-      // ignore local cache error
-    }
+    } catch { void 0; }
     setOfflineState(false);
     await refreshSession();
     toast.success(res.message, { id: toastid });
@@ -157,7 +150,6 @@ async function onError(event: FormErrorEvent) {
 
 <template>
   <div class="relative min-h-screen flex items-center justify-center p-4">
-    <!-- Interactive Cursor Glow active on Auth Pages -->
     <BackgroundGlow />
 
     <div class="w-full max-w-sm">

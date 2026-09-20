@@ -28,7 +28,6 @@ const {
   >
     <template #body>
       <div class="flex flex-col gap-4">
-        <!-- Primary -->
         <fieldset>
           <legend class="text-[11px] leading-none font-semibold mb-2 select-none flex items-center gap-1">
             Primary
@@ -65,7 +64,6 @@ const {
           </div>
         </fieldset>
 
-        <!-- Neutral -->
         <fieldset>
           <legend class="text-[11px] leading-none font-semibold mb-2 select-none flex items-center gap-1">
             Neutral
@@ -93,7 +91,6 @@ const {
           </div>
         </fieldset>
 
-        <!-- Radius -->
         <fieldset>
           <legend class="text-[11px] leading-none font-semibold mb-2 select-none flex items-center gap-1">
             Radius
@@ -121,7 +118,6 @@ const {
           </div>
         </fieldset>
 
-        <!-- Font -->
         <fieldset>
           <legend class="text-[11px] leading-none font-semibold mb-2 select-none flex items-center gap-1">
             Font
@@ -150,7 +146,6 @@ const {
           </div>
         </fieldset>
 
-        <!-- Icons -->
         <fieldset>
           <legend class="text-[11px] leading-none font-semibold mb-2 select-none flex items-center gap-1">
             Icons
@@ -179,7 +174,6 @@ const {
           </div>
         </fieldset>
 
-        <!-- Color Mode -->
         <fieldset>
           <legend class="text-[11px] leading-none font-semibold mb-2 select-none flex items-center gap-1">
             Color Mode
@@ -206,7 +200,6 @@ const {
           </div>
         </fieldset>
 
-        <!-- Reset -->
         <fieldset v-if="hasChanges">
           <legend class="text-[11px] leading-none font-semibold mb-2 select-none">
             Reset

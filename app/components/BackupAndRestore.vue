@@ -449,9 +449,7 @@ const confirmAndExecuteRestore = async () => {
     :description="restoreStatus === 'idle' ? 'Export or import your encrypted authenticators' : 'Live verification and vault sync progress'"
   >
     <template #body>
-      <!-- Mode 1: Option Selector (Idle) -->
       <div v-if="restoreStatus === 'idle'" class="space-y-3">
-        <!-- Option 1: Backup Encrypted -->
         <div class="rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden transition-colors">
           <button
             class="w-full flex items-center justify-between p-3.5 bg-neutral-50/50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left transition-colors cursor-pointer"
@@ -493,7 +491,6 @@ const confirmAndExecuteRestore = async () => {
           </div>
         </div>
 
-        <!-- Option 2: Backup Plain URIs -->
         <div class="rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden transition-colors">
           <button
             class="w-full flex items-center justify-between p-3.5 bg-neutral-50/50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left transition-colors cursor-pointer"
@@ -527,7 +524,6 @@ const confirmAndExecuteRestore = async () => {
 
         <USeparator label="or import" class="my-1" />
 
-        <!-- Option 3: Restore Encrypted -->
         <div class="rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden transition-colors">
           <button
             class="w-full flex items-center justify-between p-3.5 bg-neutral-50/50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left transition-colors cursor-pointer"
@@ -577,7 +573,6 @@ const confirmAndExecuteRestore = async () => {
           </div>
         </div>
 
-        <!-- Option 4: Restore URIs -->
         <div class="rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden transition-colors">
           <button
             class="w-full flex items-center justify-between p-3.5 bg-neutral-50/50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-left transition-colors cursor-pointer"
@@ -617,9 +612,7 @@ const confirmAndExecuteRestore = async () => {
         </div>
       </div>
 
-      <!-- Mode 2: Live Progress & Decision Console -->
       <div v-else class="space-y-4">
-        <!-- Status Bar & Progress -->
         <div class="space-y-1.5">
           <div class="flex justify-between items-center text-xs text-neutral-600 dark:text-neutral-400">
             <div class="flex items-center gap-2">
@@ -662,7 +655,6 @@ const confirmAndExecuteRestore = async () => {
             </span>
           </div>
 
-          <!-- Progress bar -->
           <div class="w-full bg-neutral-200 dark:bg-neutral-800 h-1.5 rounded-full overflow-hidden">
             <div
               class="h-full transition-all duration-200 ease-out"
@@ -680,7 +672,6 @@ const confirmAndExecuteRestore = async () => {
           </div>
         </div>
 
-        <!-- Terminal Console Log Window -->
         <div class="rounded-lg border border-neutral-800 bg-neutral-950 overflow-hidden shadow-inner">
           <div class="flex items-center justify-between px-3 py-1.5 bg-neutral-900/90 border-b border-neutral-800 text-[11px] text-neutral-400">
             <div class="flex items-center gap-1.5">
@@ -728,9 +719,7 @@ const confirmAndExecuteRestore = async () => {
           </div>
         </div>
 
-        <!-- Confirm / Decision Panel -->
         <div v-if="restoreStatus === 'confirm'" class="space-y-3">
-          <!-- Warnings info if some lines skipped -->
           <div
             v-if="parsedSkippedAccounts.length > 0"
             class="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs text-amber-800 dark:text-amber-300 space-y-2"
@@ -759,7 +748,6 @@ const confirmAndExecuteRestore = async () => {
             </details>
           </div>
 
-          <!-- Success info if all valid -->
           <div
             v-else
             class="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2"
@@ -791,7 +779,6 @@ const confirmAndExecuteRestore = async () => {
           </div>
         </div>
 
-        <!-- Error State -->
         <div v-else-if="restoreStatus === 'error'" class="space-y-3">
           <div class="p-3 rounded-lg border border-rose-500/30 bg-rose-500/10 text-xs text-rose-800 dark:text-rose-300 flex items-start gap-2">
             <UIcon name="i-lucide-alert-circle" class="size-4 shrink-0 mt-0.5 text-rose-500" />
@@ -809,7 +796,6 @@ const confirmAndExecuteRestore = async () => {
           </UButton>
         </div>
 
-        <!-- Scanning Active -->
         <div v-else-if="restoreStatus === 'scanning'" class="flex justify-between items-center pt-1 text-xs text-neutral-500">
           <div class="flex items-center gap-2">
             <UIcon name="i-lucide-loader-2" class="size-3.5 animate-spin text-(--ui-primary)" />
@@ -826,13 +812,11 @@ const confirmAndExecuteRestore = async () => {
           </UButton>
         </div>
 
-        <!-- Saving Active -->
         <div v-else-if="restoreStatus === 'saving'" class="flex items-center gap-2 pt-1 text-xs text-neutral-500">
           <UIcon name="i-lucide-loader-2" class="size-3.5 animate-spin text-(--ui-primary)" />
           <span>Encrypting and syncing accounts with vault...</span>
         </div>
 
-        <!-- Done -->
         <div v-else-if="restoreStatus === 'done'" class="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
           <UIcon name="i-lucide-check-circle" class="size-4 shrink-0 text-emerald-500" />
           <span class="font-medium">Import completed successfully! Closing...</span>

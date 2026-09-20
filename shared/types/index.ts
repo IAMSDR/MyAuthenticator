@@ -119,7 +119,6 @@ export const passkeyTableSchema = z.object({
   createdAt: z.string().nonempty(),
 });
 
-// TYPES
 export type Account = z.infer<typeof accountSchema>;
 export type CipherAccount = z.infer<typeof cipherAccountSchema>;
 export type Accounts = z.infer<typeof accountsSchema>;

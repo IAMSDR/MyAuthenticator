@@ -66,12 +66,12 @@ export async function setCachedIconSearch(query: string, icons: Icon[]): Promise
       if (icon?.icon) {
         try {
           await mod.set(`${NAME_PREFIX}${icon.icon}`, { v: icon, ts: now } as Wrapped<Icon>);
-        } catch {}
+        } catch { void 0; }
       }
     }
     await pruneByTs(mod, SEARCH_PREFIX, MAX_CACHED_QUERIES);
     await pruneByTs(mod, NAME_PREFIX, MAX_CACHED_ICONS);
-  } catch {}
+  } catch { void 0; }
 }
 
 export async function getCachedIconByName(name: string): Promise<Icon | undefined> {
@@ -91,10 +91,10 @@ export async function rememberIcon(icon: Icon): Promise<void> {
   try {
     await mod.set(`${NAME_PREFIX}${icon.icon}`, { v: icon, ts: Date.now() } as Wrapped<Icon>);
     await pruneByTs(mod, NAME_PREFIX, MAX_CACHED_ICONS);
-  } catch {}
+  } catch { void 0; }
 }
 
-/** Offline fallback for matchIcon(): substring scan over remembered icons. */
+// Offline fallback: scan remembered icons by substring.
 export async function findCachedIconMatch(query: string): Promise<string | undefined> {
   const mod = await idbMod();
   if (!mod) return undefined;
@@ -111,7 +111,7 @@ export async function findCachedIconMatch(query: string): Promise<string | undef
       const hay = `${icon.label ?? ""} ${icon.icon} ${icon.description ?? ""}`.toLowerCase();
       if (hay.includes(q)) return icon.icon;
     }
-  } catch {}
+  } catch { void 0; }
   return undefined;
 }
 
@@ -132,5 +132,5 @@ async function pruneByTs(mod: IDB, prefix: string, max: number): Promise<void> {
     withTs.sort((a, b) => a.ts - b.ts);
     const toDelete = withTs.slice(0, withTs.length - max);
     for (const { k } of toDelete) await mod.del(k);
-  } catch {}
+  } catch { void 0; }
 }

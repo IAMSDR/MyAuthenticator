@@ -64,13 +64,11 @@ async function addAccount(event: FormSubmitEvent<Account>) {
     createdAt: now,
   } as CipherAccount;
 
-  // Optimistically update memory so dashboard reflects change immediately
   const { data: accountsData } = useNuxtData<CipherAccount[]>("accounts");
   if (accountsData.value) {
     accountsData.value = [cipherAccount, ...accountsData.value];
   }
 
-  // Dismiss modal immediately for instant UI feedback
   emit("close");
   loading.value = false;
 
@@ -85,7 +83,6 @@ async function addAccount(event: FormSubmitEvent<Account>) {
     })
     .catch(async (err) => {
       toast.error(getWriteErrorMessage(err, "save this authenticator"), { id: toastid });
-      // Rollback on failure
       if (accountsData.value) {
         accountsData.value = accountsData.value.filter((a) => a.id !== cipherAccount.id);
       }

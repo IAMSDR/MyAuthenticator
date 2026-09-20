@@ -287,7 +287,6 @@ export function useTheme() {
       Object.assign(appConfig.ui.icons, themeIcons.lucide);
     }
 
-    // Clean up auxiliary colors added by AI theme
     const colorKeys = ["secondary", "success", "info", "warning", "error"] as const;
     for (const c of colorKeys) {
       if ((appConfig.ui.colors as Record<string, unknown>)[c]) {
