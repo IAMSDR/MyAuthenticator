@@ -53,7 +53,7 @@ const toggleSearch = () => {
         <button
           type="button"
           aria-label="Add account"
-          class="group relative flex items-center justify-center size-[54px] -mt-7 rounded-full bg-(--ui-primary) text-white active:scale-95 transition-all duration-150 focus-visible:outline-none ring-4 ring-white/70 dark:ring-neutral-950/70 shadow-lg shadow-(--ui-primary)/30 dark:shadow-(--ui-primary)/25 cursor-pointer"
+          class="group relative flex items-center justify-center size-[54px] -mt-7 rounded-full bg-(--ui-color-primary-600) text-white active:scale-95 transition-all duration-150 focus-visible:outline-none ring-4 ring-white/70 dark:ring-neutral-950/70 shadow-lg shadow-(--ui-color-primary-600)/30 dark:shadow-(--ui-color-primary-600)/25 cursor-pointer"
           @click="addModal.open()"
         >
           <UIcon

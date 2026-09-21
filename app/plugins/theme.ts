@@ -140,7 +140,7 @@ export default defineNuxtPlugin({
             var bapEl = document.querySelector('style#nuxt-ui-black-as-primary');
             if (bapEl) {
               if (localStorage.getItem('nuxt-ui-black-as-primary') === 'true') {
-                bapEl.innerHTML = ':root { --ui-primary: black; } .dark { --ui-primary: white; }';
+                bapEl.innerHTML = ':root { --ui-primary: black; --ui-color-primary-600: #171717; } .dark { --ui-primary: white; --ui-color-primary-600: #e5e5e5; }';
               } else {
                 bapEl.innerHTML = '';
               }

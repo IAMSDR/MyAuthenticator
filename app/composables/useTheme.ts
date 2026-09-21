@@ -208,7 +208,7 @@ export function useTheme() {
   const radiusStyle = computed(() => `:root { --ui-radius: ${_radius.value}rem; }`);
   const blackAsPrimaryStyle = computed(() =>
     _blackAsPrimary.value
-      ? `:root { --ui-primary: black; } .dark { --ui-primary: white; }`
+      ? `:root { --ui-primary: black; --ui-color-primary-600: #171717; } .dark { --ui-primary: white; --ui-color-primary-600: #e5e5e5; }`
       : ":root {}"
   );
   const fontStyle = computed(() => `:root { --font-sans: '${_font.value}', sans-serif; }`);

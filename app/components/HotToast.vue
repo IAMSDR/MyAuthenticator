@@ -9,10 +9,10 @@ defineProps<{
 
 <template>
   <div
-    class="flex items-start bg-white text-[#101010] text-sm px-3 py-2 rounded-md shadow-md w-fit max-w-[min(480px,calc(100vw-2rem))] mx-auto cursor-pointer pointer-events-auto select-none"
+    class="flex items-center bg-white text-[#101010] text-sm px-3 py-2 rounded-md shadow-md w-fit max-w-[min(480px,calc(100vw-2rem))] mx-auto cursor-pointer pointer-events-auto select-none"
     @click.prevent="onCloseToast?.()"
   >
-    <div v-if="icon || type === 'success' || type === 'error' || type === 'loading'" class="flex items-center justify-center mr-2 shrink-0 pt-0.5">
+    <div v-if="icon || type === 'success' || type === 'error' || type === 'loading'" class="flex items-center justify-center mr-2 shrink-0">
       <div v-if="icon">
         <img
           :src="icon"
