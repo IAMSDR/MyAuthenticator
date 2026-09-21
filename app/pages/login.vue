@@ -76,8 +76,8 @@ const loginWithPasskey = async () => {
     await set(`wrappedDEK:prf:${credentialId}`, wrappedData.wrappedDEK);
     setOfflineState(false);
     await refreshSession();
-    toast.success("Passkey login successful", { id });
     await navigateTo("/");
+    toast.success("Passkey login successful", { id });
   } catch (e: any) {
     toast.error(e?.data?.message ?? (e instanceof Error ? e.message : String(e)), { id });
   } finally {
@@ -94,8 +94,8 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
       const ok = await unlockWithPassword(event.data.password);
       if (ok) {
         setOfflineState(true);
-        toast.success("Unlocked offline", { id: toastid });
         await navigateTo("/");
+        toast.success("Unlocked offline", { id: toastid });
         return;
       }
       toast.error("Incorrect password or no cached vault data.", { id: toastid });
@@ -113,8 +113,8 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
         const ok = await unlockWithPassword(event.data.password);
         if (ok) {
           setOfflineState(true);
-          toast.success("Unlocked offline", { id: toastid });
           await navigateTo("/");
+          toast.success("Unlocked offline", { id: toastid });
           return;
         }
         toast.error(offlineMessage("log in"), { id: toastid });
@@ -131,8 +131,8 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
     } catch { void 0; }
     setOfflineState(false);
     await refreshSession();
-    toast.success(res.message, { id: toastid });
     await navigateTo("/");
+    toast.success(res.message, { id: toastid });
   } catch (e: any) {
     toast.error(
       e?.data?.message ?? (e instanceof Error ? e.message : String(e)),
