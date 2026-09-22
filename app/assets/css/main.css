@@ -72,4 +72,22 @@ body {
   @apply outline-none ring-2 ring-(--ui-primary)/30;
 }
 
+/* Center sonner custom (unstyled) toasts on desktop.
+   Sonner centers the 356px toaster, but leaves center-positioned toasts
+   at its left edge. Offset the toast by half its own width and keep
+   sonner's --y animation transform intact (desktop only; the <=600px
+   media query in sonner handles mobile).
+   `width: max-content` (not fit-content) avoids the abspos clamp that
+   left:50% would otherwise impose, so the pill shrinks to its content
+   while still centering. The inner HotToast caps width via max-w. */
+@media (min-width: 601px) {
+  [data-sonner-toaster][data-x-position="center"]
+    [data-sonner-toast][data-styled="false"]:not([data-swiping="true"]) {
+    left: 50%;
+    transform: translateX(-50%) var(--y);
+    width: max-content;
+    max-width: calc(100vw - 2rem);
+  }
+}
+
 
