@@ -93,7 +93,9 @@
       "@babel/plugin-transform-modules-systemjs": "^7.29.4",
       "postcss-selector-parser@^7": "^7.1.5",
       "esbuild": "^0.28.1",
-      "ajv@^8": "^8.20.0"
+      "ajv@^8": "^8.20.0",
+      "undici@^8": "^8.10.2",
+      "undici@^7": "^7.30.0"
     }
   },
   "packageManager": "pnpm@9.15.1+sha512.1acb565e6193efbebda772702950469150cf12bcc764262e7587e71d19dc98a423dff9536e57ea44c49bdf790ff694e83c27be5faa23d67e0c033b583be4bfcf"
