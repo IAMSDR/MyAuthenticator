@@ -16,6 +16,8 @@ export default defineWebAuthnRegisterEventHandler({
   },
   // @ts-expect-error simplewebauthn v13 PRF client extension typing
   async getOptions(event) {
+    // Runs for both registration ceremony steps.
+    await requireUserSession(event);
     const redis = await getRedis(event);
     const prfSalt = await redis.get(redisKeys.prfSalt);
     if (prfSalt) {
@@ -34,6 +36,7 @@ export default defineWebAuthnRegisterEventHandler({
   },
   validateUser: (user) => passkeyUser.parseAsync(user),
   async onSuccess(event, { user, credential }) {
+    await requireUserSession(event);
     const redis = await getRedis(event);
     const exists = redis.hexists
       ? (await redis.hexists(redisKeys.passkeys, credential.id)) === 1
