@@ -6,6 +6,8 @@ import Share from "./Share.vue";
 import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 import { deleteCachedAccount } from "~/utils/cache";
 
+defineOptions({ name: "AccountTile" });
+
 const overlay = useOverlay();
 
 const editModal = overlay.create(Edit);

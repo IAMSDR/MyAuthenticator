@@ -3,6 +3,7 @@ import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
 import { toast } from "~/utils/toast";
 import { set } from "idb-keyval";
 import { startAuthentication } from "@simplewebauthn/browser";
+import type { PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
 import { isNetworkError, offlineMessage, onlineNow } from "~/utils/offline";
 import { normalizePrfExtension, getPrfResultBytes } from "~/utils/webauthn";
 import BackgroundGlow from "~/components/BackgroundGlow.vue";
@@ -18,6 +19,12 @@ const state = reactive({
 const loading = ref(false);
 const show = ref(false);
 
+// Extract the most specific message from a thrown value (FetchError-like `data.message` first).
+function errorMessage(e: unknown): string {
+  const data = (e as { data?: { message?: string } } | null)?.data;
+  return data?.message ?? (e instanceof Error ? e.message : String(e));
+}
+
 const loginWithPasskey = async () => {
   if (!onlineNow()) {
     toast.error("Passkey login requires an internet connection. Use password offline.");
@@ -26,7 +33,7 @@ const loginWithPasskey = async () => {
   loading.value = true;
   const id = toast.loading("Authenticating...");
   try {
-    const { requestOptions, attemptId } = await $fetch<{ requestOptions: any; attemptId: string }>("/api/webauthn/authenticate", {
+    const { requestOptions, attemptId } = await $fetch<{ requestOptions: PublicKeyCredentialRequestOptionsJSON; attemptId: string }>("/api/webauthn/authenticate", {
       method: "POST",
       body: {
         verify: false,
@@ -78,8 +85,8 @@ const loginWithPasskey = async () => {
     await refreshSession();
     await navigateTo("/");
     toast.success("Passkey login successful", { id });
-  } catch (e: any) {
-    toast.error(e?.data?.message ?? (e instanceof Error ? e.message : String(e)), { id });
+  } catch (e: unknown) {
+    toast.error(errorMessage(e), { id });
   } finally {
     loading.value = false;
   }
@@ -133,9 +140,9 @@ const onSubmit = async (event: FormSubmitEvent<Login>) => {
     await refreshSession();
     await navigateTo("/");
     toast.success(res.message, { id: toastid });
-  } catch (e: any) {
+  } catch (e: unknown) {
     toast.error(
-      e?.data?.message ?? (e instanceof Error ? e.message : String(e)),
+      errorMessage(e),
       { id: toastid },
     );
   } finally {

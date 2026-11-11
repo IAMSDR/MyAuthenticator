@@ -117,7 +117,7 @@ You'll use the same three values with either host.
 Run this in a terminal and copy the output:
 
 ```sh
-openssl rand -hex 32
+openssl rand -base64 32
 ```
 
 <details>
@@ -133,7 +133,7 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 
 Both hosts need the same three variables. Paste each value without quotes:
 
-- **`NUXT_SESSION_PASSWORD`** — the random string you just generated. It must be at least 32 characters and is used to protect session cookies.
+- **`NUXT_APP_SECRET`** — the random string you just generated. It must be at least 32 characters and is used to protect session cookies.
 - **`UPSTASH_REDIS_REST_URL`** — the HTTPS REST URL from your database, such as `https://your-database.upstash.io`.
 - **`UPSTASH_REDIS_REST_TOKEN`** — the read/write REST token from the same database.
 
@@ -161,7 +161,7 @@ The session secret stays in your server settings. You'll choose a separate passw
 6. Add the three [environment variables](#environment-variables) in **Settings → Environment variables**. Add them for both **Production** and **Preview** — use these exact names:
 
    ```text
-   NUXT_SESSION_PASSWORD
+   NUXT_APP_SECRET
    UPSTASH_REDIS_REST_URL
    UPSTASH_REDIS_REST_TOKEN
    ```
@@ -185,7 +185,7 @@ Every push to your fork — including when you [sync it with this repository](#k
 4. Add the three [environment variables](#environment-variables) in **Project Settings → Environment Variables**. Vercel does not pre-fill the names, so add each one — use these exact names:
 
    ```text
-   NUXT_SESSION_PASSWORD
+   NUXT_APP_SECRET
    UPSTASH_REDIS_REST_URL
    UPSTASH_REDIS_REST_TOKEN
    ```
@@ -226,7 +226,7 @@ Deploy and run MyAuthenticator as a production Node.js service on your own Linux
    ```
 
    Open `.env` and fill in:
-   - `NUXT_SESSION_PASSWORD` — your random 32+ character string from [step 1](#1-prepare-your-credentials).
+   - `NUXT_APP_SECRET` — your random 32+ character string from [step 1](#1-prepare-your-credentials).
    - Redis database: set `REDIS_URL="redis://localhost:6379"` for local Redis, or your `UPSTASH_REDIS_REST_*` credentials.
    - `PORT` — server port. Uncomment the `PORT` line in `.env` and set it to `3000` if you want to use the address below.
 
@@ -341,11 +341,11 @@ Set up a local development environment with hot-reloading if you want to develop
 
 Before you start, you'll need:
 
-- Git and Node.js 22. The pinned Node.js version is in [`.nvmrc`](./.nvmrc).
-- pnpm 9.15.1.
+- Git and Node.js 26.13.0. The pinned Node.js version is in [`.nvmrc`](./.nvmrc).
+- pnpm 12.18.0.
 - A Redis database, either local or through [Upstash](#1-prepare-your-credentials).
 
-If pnpm is not installed, run `npm install -g pnpm@9.15.1` after installing Node.js.
+If pnpm is not installed, run `corepack enable` after installing Node.js.
 
 **1. Clone and install**
 
@@ -372,7 +372,7 @@ With Redis running locally, remove both `UPSTASH_REDIS_REST_*` entries from `.en
 REDIS_URL="redis://localhost:6379"
 ```
 
-Keep `NUXT_SESSION_PASSWORD` and `PORT`. If both Upstash credentials and `REDIS_URL` are set, the app chooses Upstash.
+Keep `NUXT_APP_SECRET` and `PORT`. If both Upstash credentials and `REDIS_URL` are set, the app chooses Upstash.
 
 This works with the Node.js server. On Cloudflare Pages, use Upstash's REST credentials.
 
@@ -440,9 +440,9 @@ Here's what the app encrypts and what the server stores:
 
   Check that the REST URL and token come from the same Upstash database and that the token has write access. Make sure both values are saved in your host's environment settings.
 
-- **A session password error**
+- **An app secret error**
 
-  Check that `NUXT_SESSION_PASSWORD` is at least 32 characters. Restart the local server or redeploy after changing it.
+  Check that `NUXT_APP_SECRET` is at least 32 characters. Restart the local server or redeploy after changing it. Upgrading `nuxt-auth-utils` to v0.6 changes the session cookie format and requires users to sign in again once.
 
 - **Cloudflare Pages build or Redis TCP errors**
 

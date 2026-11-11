@@ -4,8 +4,11 @@ import { h } from "vue";
 import type { TableColumn } from "@nuxt/ui";
 import { toast } from "~/utils/toast";
 import { startRegistration } from "@simplewebauthn/browser";
+import type { PublicKeyCredentialCreationOptionsJSON } from "@simplewebauthn/browser";
 import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 import { normalizePrfExtension, getPrfResultBytes } from "~/utils/webauthn";
+
+defineOptions({ name: "PasskeysManager" });
 
 const UButton = resolveComponent("UButton");
 
@@ -24,7 +27,7 @@ const columns: TableColumn<Passkey>[] = [
     header: "Created",
     accessorKey: "createdAt",
     cell: ({ row }) => {
-      const d = (row.original as any).createdAt;
+      const d = row.original.createdAt;
       return d ? new Date(d).toLocaleDateString() : "-";
     },
   },
@@ -60,7 +63,7 @@ const addPasskey = async () => {
       displayName: passKeyName.value,
     };
 
-    const { creationOptions, attemptId } = await $fetch<{ creationOptions: any; attemptId: string }>("/api/webauthn/register", {
+    const { creationOptions, attemptId } = await $fetch<{ creationOptions: PublicKeyCredentialCreationOptionsJSON; attemptId: string }>("/api/webauthn/register", {
       method: "POST",
       body: {
         user,
@@ -106,14 +109,16 @@ const addPasskey = async () => {
 
     passKeyName.value = "";
     if (onlineNow()) await refreshNuxtData("passkeys");
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (createdCredId && onlineNow()) {
       try {
         await $fetch("/api/webauthn/passkeys", {
           method: "DELETE",
           query: { id: createdCredId },
         });
-      } catch {}
+      } catch {
+        // Best-effort cleanup of the orphaned credential; ignore failures.
+      }
     }
     toast.error(getWriteErrorMessage(err, "manage passkeys"));
     console.error(err);
@@ -129,15 +134,15 @@ const deletePasskey = async (id: string) => {
   );
   if (!isSure) return;
   const toastid = toast.loading("Deleting...");
-  $fetch("/api/webauthn/passkeys", {
+  $fetch<{ message: string }>("/api/webauthn/passkeys", {
     method: "DELETE",
     query: { id: id },
   })
     .then(async (res) => {
-      toast.success((res as any).message, { id: toastid });
+      toast.success(res.message, { id: toastid });
       if (onlineNow()) await refreshNuxtData("passkeys");
     })
-    .catch((err: any) => {
+    .catch((err: unknown) => {
       console.error(err);
       toast.error(getWriteErrorMessage(err, "manage passkeys"), { id: toastid });
     });

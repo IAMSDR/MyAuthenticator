@@ -6,10 +6,10 @@
         class="absolute left-3.5 size-[15px] text-neutral-400 dark:text-neutral-500 group-focus-within:text-neutral-900 dark:group-focus-within:text-white transition-colors pointer-events-none"
       />
       <input
+        ref="input"
         class="w-full h-9 pl-9 pr-9 rounded-full bg-neutral-100/80 dark:bg-white/[0.06] border border-transparent hover:bg-neutral-100 dark:hover:bg-white/[0.08] focus:bg-white dark:focus:bg-neutral-900 focus:border-neutral-200 dark:focus:border-white/10 text-[13px] text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-0 transition-all"
         type="text"
         :value="modalValue"
-        ref="input"
         placeholder="Search"
         @input="onInput"
       >
@@ -36,6 +36,8 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: "AccountSearch" });
+
 const props = defineProps<{ modalValue: string }>();
 const emit = defineEmits<{ (e: "update:modalValue", value: string): void }>();
 

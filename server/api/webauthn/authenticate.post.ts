@@ -8,7 +8,7 @@ export default defineWebAuthnAuthenticateEventHandler({
     const challenge = await redis.getdel(challengeKey(attemptId));
     if (!challenge) {
       throw createError({
-        statusCode: 400,
+        status: 400,
         message: "Challenge not found or expired",
       });
     }
@@ -38,8 +38,8 @@ export default defineWebAuthnAuthenticateEventHandler({
     const raw = await redis.hget(redisKeys.passkeys, credentialID);
     if (!raw) {
       throw createError({
-        statusCode: 404,
-        statusMessage: "Credential not found",
+        status: 404,
+        statusText: "Credential not found",
       });
     }
     const credential = JSON.parse(raw) as { id: string; publicKey: string; counter: number; backedUp: boolean; transports: unknown; displayName: string; user: string; createdAt: string };

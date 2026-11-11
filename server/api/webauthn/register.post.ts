@@ -8,7 +8,7 @@ export default defineWebAuthnRegisterEventHandler({
     const challenge = await redis.getdel(challengeKey(attemptId));
     if (!challenge) {
       throw createError({
-        statusCode: 400,
+        status: 400,
         message: "Challenge not found or expired",
       });
     }
@@ -43,7 +43,7 @@ export default defineWebAuthnRegisterEventHandler({
       : (await redis.hget(redisKeys.passkeys, credential.id)) !== null;
     if (exists) {
       throw createError({
-        statusCode: 409,
+        status: 409,
         message: "Device already registered",
       });
     }

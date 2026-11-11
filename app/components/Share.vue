@@ -7,6 +7,8 @@ defineProps<{
   uri: string;
 }>();
 
+defineOptions({ name: "ShareAccount" });
+
 const level = ref<Level>("M");
 const renderAs = ref<RenderAs>("svg");
 </script>

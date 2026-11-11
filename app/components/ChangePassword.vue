@@ -103,7 +103,7 @@ const onSubmit = async () => {
         </UFormField>
 
         <div class="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
-          <input id="showPw" v-model="show" type="checkbox" class="rounded cursor-pointer" />
+          <input id="showPw" v-model="show" type="checkbox" class="rounded cursor-pointer" >
           <label for="showPw" class="cursor-pointer">Show passwords</label>
         </div>
 

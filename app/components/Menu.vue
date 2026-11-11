@@ -5,6 +5,8 @@ import Passkeys from "./Passkeys.vue";
 import BackupAndRestore from "./BackupAndRestore.vue";
 import ChangePassword from "./ChangePassword.vue";
 
+defineOptions({ name: "SettingsMenu" });
+
 const emit = defineEmits(["close"]);
 const { clear } = useUserSession();
 const { clearDEK } = useEncryption();
@@ -26,6 +28,7 @@ const logout = async () => {
       const runtimeOnly = deletable.filter((n) => n === "iconify-api");
       await Promise.all(runtimeOnly.map((name) => window.caches.delete(name)));
     } catch {
+      // Cache cleanup is best-effort; ignore failures so logout still proceeds.
     }
   }
   if (typeof navigator === "undefined" || navigator.onLine !== false) {

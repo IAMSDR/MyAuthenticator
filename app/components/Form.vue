@@ -4,6 +4,8 @@ import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
 import { toast } from "~/utils/toast";
 import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
+defineOptions({ name: "AccountForm" });
+
 const emit = defineEmits(["close"]);
 
 const state = reactive<Account>({
@@ -51,7 +53,8 @@ async function addAccount(event: FormSubmitEvent<Account>) {
   let cipherSecret = "";
   try {
     cipherSecret = await encryptWithKey(event.data.secret, dek.value);
-  } catch (err) {
+  } catch {
+    // Encryption failure must not leak the secret; surface a generic error.
     toast.error("Encryption failed");
     loading.value = false;
     return;

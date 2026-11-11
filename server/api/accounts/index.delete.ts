@@ -2,14 +2,14 @@ export default eventHandler(async (event) => {
   await requireUserSession(event);
   const query = getQuery(event);
   const id = query.id as string | undefined;
-  if (!id) throw createError({ statusCode: 400, message: "Missing id" });
+  if (!id) throw createError({ status: 400, message: "Missing id" });
 
   const redis = await getRedis(event);
   const exists = redis.hexists
     ? (await redis.hexists(redisKeys.accounts, id)) === 1
     : (await redis.hget(redisKeys.accounts, id)) !== null;
   if (!exists) {
-    throw createError({ statusCode: 404, message: "Account not found" });
+    throw createError({ status: 404, message: "Account not found" });
   }
 
   const commands: [string, ...unknown[]][] = [
