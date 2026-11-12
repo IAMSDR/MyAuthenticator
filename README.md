@@ -341,11 +341,11 @@ Set up a local development environment with hot-reloading if you want to develop
 
 Before you start, you'll need:
 
-- Git and Node.js 26.13.0. The pinned Node.js version is in [`.nvmrc`](./.nvmrc).
+- Git and Node.js 26.13.1. The pinned Node.js version is in [`.nvmrc`](./.nvmrc).
 - pnpm 12.18.0.
 - A Redis database, either local or through [Upstash](#1-prepare-your-credentials).
 
-If pnpm is not installed, run `corepack enable` after installing Node.js.
+If pnpm is not installed, run `npm install -g corepack && corepack enable` after installing Node.js.
 
 **1. Clone and install**
 

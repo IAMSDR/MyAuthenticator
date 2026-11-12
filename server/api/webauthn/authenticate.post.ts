@@ -40,6 +40,7 @@ export default defineWebAuthnAuthenticateEventHandler({
       throw createError({
         status: 404,
         statusText: "Credential not found",
+        message: "Credential not found",
       });
     }
     const credential = JSON.parse(raw) as { id: string; publicKey: string; counter: number; backedUp: boolean; transports: unknown; displayName: string; user: string; createdAt: string };
