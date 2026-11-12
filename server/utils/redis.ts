@@ -288,7 +288,7 @@ export async function getRedis(event?: H3Event): Promise<RedisClient> {
     const isCloudflare = isCloudflareRuntime(event);
     if (isCloudflare) {
       const err = createError({
-        statusCode: 500,
+        status: 500,
         message: "REDIS_URL (ioredis) is not supported on Cloudflare Workers. Use UPSTASH_REDIS_REST_URL + TOKEN.",
       });
       // Set _redisPromise so concurrent callers are deduplicated, then clear on rejection.
@@ -311,7 +311,7 @@ export async function getRedis(event?: H3Event): Promise<RedisClient> {
     return _redisPromise;
   }
 
-  throw createError({ statusCode: 500, message: "Redis not configured. Set UPSTASH_REDIS_REST_URL+TOKEN or REDIS_URL" });
+  throw createError({ status: 500, message: "Redis not configured. Set UPSTASH_REDIS_REST_URL+TOKEN or REDIS_URL" });
 }
 
 export const redisKeys = {

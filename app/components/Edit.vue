@@ -4,6 +4,8 @@ import type { FormErrorEvent, FormSubmitEvent } from "#ui/types";
 import { toast } from "~/utils/toast";
 import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
+defineOptions({ name: "EditAccountModal" });
+
 const props = defineProps<{ account: AccountEdit; accountId: string }>();
 
 const emit = defineEmits(["close"]);

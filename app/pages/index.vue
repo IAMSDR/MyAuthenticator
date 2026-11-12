@@ -36,7 +36,7 @@ const { data: cipherData, status } = await useAsyncData<CipherAccount[]>("accoun
     await cacheAccountsFromServer(fresh, { version: meta.version, updatedAt: meta.updatedAt }, order);
     setOfflineState(false);
     return sortByOrder(fresh, order);
-  } catch (e: any) {
+  } catch (e: unknown) {
     // Only fallback to cache on transport/offline failures, not HTTP 401/500.
     if (isNetworkError(e) || !onlineNow()) {
       setOfflineState(true);

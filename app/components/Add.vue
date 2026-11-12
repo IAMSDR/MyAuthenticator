@@ -3,6 +3,8 @@ import AdaptiveModal from "./AdaptiveModal.vue";
 import Form from "./Form.vue";
 import Qrscan from "./Qrscan.vue";
 
+defineOptions({ name: "AddAccountModal" });
+
 const overlay = useOverlay();
 const emit = defineEmits(["close"]);
 

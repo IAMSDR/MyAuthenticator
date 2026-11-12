@@ -1,5 +1,6 @@
 import { markRaw } from "vue";
 import { toast as sonnerToast } from "vue-sonner";
+import type { ExternalToast } from "vue-sonner";
 import HotToast from "~/components/HotToast.vue";
 
 export type ToastType = "success" | "error" | "loading" | "info" | "default";
@@ -15,7 +16,7 @@ export const showToast = (
   type: ToastType = "default",
   options?: ToastOptions,
 ) => {
-  const customOptions: Record<string, any> = {
+  const customOptions: ExternalToast & { type?: "success" | "error" | "loading" | "info" | "default" } = {
     type: type === "default" ? undefined : type,
     duration: options?.duration,
     componentProps: {

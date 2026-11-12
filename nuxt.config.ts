@@ -21,9 +21,6 @@ export default defineNuxtConfig({
     iconifyApiEndpoint: "https://api.iconify.design",
   },
   runtimeConfig: {
-    session: {
-      password: "",
-    },
     upstashRedisRestUrl: "",
     upstashRedisRestToken: "",
     redisUrl: "",

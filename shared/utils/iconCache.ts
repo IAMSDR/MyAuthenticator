@@ -20,26 +20,28 @@ async function idbMod(): Promise<IDB | null> {
 
 const norm = (q: string) => q.trim().toLowerCase();
 type Wrapped<T> = { v: T; ts: number };
+type LegacySearch = { icons?: Icon[]; v?: Icon[]; ts?: number };
+type LegacyIcon = Icon & { v?: Icon };
 
 function unwrapSearch(raw: unknown): { icons: Icon[]; ts?: number } | undefined {
   if (!raw) return undefined;
   if (Array.isArray(raw)) return { icons: raw as Icon[] }; // legacy: raw Icon[]
-  const w = raw as any;
-  if (Array.isArray(w.icons)) return { icons: w.icons as Icon[], ts: w.ts };
-  if (Array.isArray(w.v)) return { icons: w.v as Icon[], ts: w.ts };
+  const w = raw as LegacySearch;
+  if (Array.isArray(w.icons)) return { icons: w.icons, ts: w.ts };
+  if (Array.isArray(w.v)) return { icons: w.v, ts: w.ts };
   return undefined;
 }
 
 function unwrapIcon(raw: unknown): Icon | undefined {
   if (!raw) return undefined;
-  const w = raw as any;
+  const w = raw as LegacyIcon;
   if (w.icon && typeof w.icon === "string" && !w.v) return w as Icon; // legacy raw Icon
   if (w.v && w.v.icon) return w.v as Icon;
   return undefined;
 }
 
 function getTs(raw: unknown): number {
-  const w = raw as any;
+  const w = raw as { ts?: unknown } | undefined;
   return typeof w?.ts === "number" ? w.ts : 0;
 }
 
@@ -61,7 +63,7 @@ export async function setCachedIconSearch(query: string, icons: Icon[]): Promise
   const now = Date.now();
   const slice = icons.slice(0, 30);
   try {
-    await mod.set(`${SEARCH_PREFIX}${norm(query)}`, { v: slice, icons: slice, ts: now } as any);
+    await mod.set(`${SEARCH_PREFIX}${norm(query)}`, { v: slice, icons: slice, ts: now } as Wrapped<Icon[]> & { icons: Icon[] });
     for (const icon of slice) {
       if (icon?.icon) {
         try {

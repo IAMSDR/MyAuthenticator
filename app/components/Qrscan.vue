@@ -5,6 +5,8 @@ import type { DetectedBarcode } from "barcode-detector/pure";
 import { toast } from "~/utils/toast";
 import { ensureOnline, getWriteErrorMessage, onlineNow } from "~/utils/offline";
 
+defineOptions({ name: "QrScanner" });
+
 const emit = defineEmits(["close"]);
 
 const state = reactive({

@@ -3,13 +3,13 @@ import { bcryptHash, bcryptVerify } from "../../utils/hash";
 export default eventHandler(async (event) => {
   await requireUserSession(event);
   const { data, error } = await readValidatedBody(event, (body) => changePasswordSchema.safeParse(body));
-  if (error) throw createError({ statusCode: 400, statusMessage: "Validation Failed", message: error.message });
+  if (error) throw createError({ status: 400, statusText: "Validation Failed", message: error.message });
 
   const redis = await getRedis(event);
   const existingHash = await redis.get(redisKeys.passwordHash);
-  if (!existingHash) throw createError({ statusCode: 500, message: "Password hash missing" });
+  if (!existingHash) throw createError({ status: 500, message: "Password hash missing" });
   const ok = await bcryptVerify(existingHash, data.oldPassword);
-  if (!ok) throw createError({ statusCode: 401, message: "Current password incorrect" });
+  if (!ok) throw createError({ status: 401, message: "Current password incorrect" });
 
   const hash = await bcryptHash(data.password);
   await runTransaction([

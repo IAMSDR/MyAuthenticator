@@ -2,12 +2,12 @@ import { bcryptHash } from "../../utils/hash";
 
 export default eventHandler(async (event) => {
   const { data, error } = await readValidatedBody(event, (body) => setupSchema.safeParse(body));
-  if (error) throw createError({ statusCode: 400, statusMessage: "Validation Failed", message: error.message });
+  if (error) throw createError({ status: 400, statusText: "Validation Failed", message: error.message });
 
   const redis = await getRedis(event);
   // Claim setup with NX lock (60s) to prevent concurrent races
   const claimed = await redis.set(redisKeys.setupComplete, "claimed", { nx: true, ex: 60 });
-  if (!claimed) throw createError({ statusCode: 409, message: "Already setup or setup in progress" });
+  if (!claimed) throw createError({ status: 409, message: "Already setup or setup in progress" });
 
   try {
     const hash = await bcryptHash(data.password);

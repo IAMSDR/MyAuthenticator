@@ -102,7 +102,9 @@ export async function deleteCachedAccount(
   const cached = await getCache();
   if (!cached) return;
 
-  delete cached.map[id];
+  cached.map = Object.fromEntries(
+    Object.entries(cached.map).filter(([key]) => key !== id)
+  );
   if (cached.order) {
     cached.order = cached.order.filter((item) => item !== id);
   }

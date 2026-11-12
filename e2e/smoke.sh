@@ -31,16 +31,17 @@ agent-browser wait --load networkidle >/dev/null
 # The app shows an unlock screen once setup is complete.
 if agent-browser find text "Unlock your vault" >/dev/null 2>&1; then
   echo "==> Unlocking with password"
-  agent-browser find textbox "PASSWORD" fill "$PASSWORD" >/dev/null
+  agent-browser find role textbox fill "$PASSWORD" >/dev/null
   agent-browser find text "Unlock vault" click >/dev/null
   sleep 3
 fi
 
 agent-browser wait --load networkidle >/dev/null
 
-# Dashboard should expose the Add button and Settings entry.
-agent-browser find text "Add" >/dev/null || fail "dashboard 'Add' button not found"
-agent-browser find text "Settings" >/dev/null || fail "dashboard 'Settings' button not found"
+# The settings button is icon-only and identified by its accessible label.
+agent-browser wait 'button[aria-label="Settings"]' --timeout 60000 >/dev/null
+agent-browser find text "Add" text >/dev/null || fail "dashboard 'Add' button not found"
+agent-browser find role button text --name "Settings" >/dev/null || fail "dashboard 'Settings' button not found"
 echo "==> Dashboard loaded"
 
 # Verify at least one TOTP code is rendered and that it refreshes over a period.

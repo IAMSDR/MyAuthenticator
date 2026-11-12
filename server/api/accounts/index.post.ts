@@ -5,15 +5,15 @@ export default eventHandler(async (event) => {
   let cipherAccounts: CipherAccount[];
   if (Array.isArray(body)) {
     const parsed = cipherAccountsSchema.safeParse(body);
-    if (!parsed.success) throw createError({ statusCode: 400, message: "Validation Failed", cause: parsed.error.message });
+    if (!parsed.success) throw createError({ status: 400, message: "Validation Failed", cause: parsed.error.message });
     cipherAccounts = parsed.data;
   } else {
     const parsed = cipherAccountSchema.safeParse(body);
-    if (!parsed.success) throw createError({ statusCode: 400, message: "Validation Failed", cause: parsed.error.message });
+    if (!parsed.success) throw createError({ status: 400, message: "Validation Failed", cause: parsed.error.message });
     cipherAccounts = [parsed.data];
   }
 
-  if (cipherAccounts.length === 0) throw createError({ statusCode: 400, message: "No accounts provided" });
+  if (cipherAccounts.length === 0) throw createError({ status: 400, message: "No accounts provided" });
 
   const uniqueMap = new Map<string, CipherAccount>();
   for (const acc of cipherAccounts) {
