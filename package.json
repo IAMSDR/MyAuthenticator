@@ -35,7 +35,7 @@
     }
   },
   "dependencies": {
-    "@iconify-json/lucide": "^1.2.153",
+    "@iconify-json/lucide": "^1.2.154",
     "@nuxt/ui": "^4.12.0",
     "@simplewebauthn/browser": "^14.0.0",
     "@simplewebauthn/server": "^14.1.0",
@@ -66,8 +66,8 @@
     "eslint": "^10.14.0",
     "typescript": "^6.0.3",
     "vitest": "^5.1.0",
-    "wrangler": "^4.160.1",
-    "ws": "^8.22.2"
+    "wrangler": "^4.161.0",
+    "ws": "^8.23.0"
   },
   "packageManager": "pnpm@12.18.0+sha512.9d7882d5dc82147ecfc4e062aa34834e0ad0296710a1837a1115ae012127d36b7109e321ac1598a1dd0a65597681b1e99917e12ed0d749eae91187943363beb3"
 }
